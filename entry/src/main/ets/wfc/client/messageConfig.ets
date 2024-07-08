@@ -68,7 +68,6 @@ import EnterChannelChatMessageContent from "../messages/enterChannelChatMessageC
 import LeaveChannelChatMessageContent from "../messages/leaveChannelChatMessageContent";
 import ModifyGroupSettingNotification from "../messages/notification/modifyGroupSettingNotification";
 import MessageContent from '../messages/messageContent';
-import { DEFAULT } from '@ohos/hypium';
 
 export default class MessageConfig {
     static getMessageContentClazz(type: number) {
@@ -412,7 +411,7 @@ export default class MessageConfig {
         },
         {
             name: 'changeGroupPortraitNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.ChangeGroupPortrait_Notification,
         },
         {
@@ -427,7 +426,7 @@ export default class MessageConfig {
         },
         {
             name: 'kickoffGroupMemberNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.KickOffGroupMember_Notification,
         },
         {
@@ -452,7 +451,7 @@ export default class MessageConfig {
         },
         {
             name: 'quitGroupNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.QuitGroup_Notification,
         },
         {
