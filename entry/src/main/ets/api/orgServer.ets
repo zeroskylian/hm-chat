@@ -8,10 +8,19 @@ import common from '@ohos.app.ability.common';
 import url from '@ohos.url';
 import GroupAnnouncement from './model/groupAnnouncement';
 import AppServerError from './appServerError';
+import OrgServerError from './orgServerError';
+import Organization from './model/organization';
+import OrganizationRelationShip from './model/organizationRelationShip';
+import OrganizationEx from './model/organizationEx';
+import Employee from './model/employee';
+import EmployeeEx from './model/employeeEx';
+import UserInfo from '../wfc/model/userInfo';
 
-class AppServer {
-    baseUrl = Config.APP_SERVER;
+class OrgServer {
+    baseUrl = Config.ORGANIZATION_SERVER;
     authToken = '';
+    isServiceAvailable = false;
+
     constructor() {
         let context = GlobalContext.getContext().getObject<common.UIAbilityContext>('context');
         let preference = data_preferences.getPreferencesSync(context, {
@@ -35,47 +44,124 @@ class AppServer {
         return this._post('/login', obj)
     }
 
-    // loinWithPassword(mobile: string, password: string) {
-    //     return new Promise((resolve, reject) => {
-    //         let responsePromise = this._post('/login_pwd', {
-    //             mobile,
-    //             password,
-    //             platform: Config.getWFCPlatform(),
-    //             clientId: wfc.getClientId()
-    //         }, true)
-    //         this._interceptLoginResponse(responsePromise, resolve, reject)
-    //     })
-    // }
-
-    async getGroupAnnouncement(groupId: string): Promise<GroupAnnouncement> {
-        let result = await this._post('/get_group_announcement', { 'groupId': groupId } as Record<string, Object>)
-        return result as GroupAnnouncement
+    login(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            wfc.getAuthCode('admin', 2, '', (code: string) => {
+                let path = '/api/user_login';
+                this._post(path, {
+                    'authCode': code
+                } as Record<string, Object>)
+                    .then((result: object) => {
+                        resolve()
+                    })
+                    .catch((err: OrgServerError) => {
+                        reject(err)
+                    })
+            }, (err: number) => {
+                reject(new Error('getAuthCode error' + err))
+            })
+        })
     }
 
-    updateGroupAnnouncement(author: string, groupId: string, announcement: string) {
-        return this._post('/put_group_announcement', {
-            'author': author,
-            'groupId': groupId,
-            'text': announcement
-        } as Record<string, Object>)
+    async getRootOrganization(): Promise<Organization[]> {
+        let result = await this._post('/api/organization/root');
+        return result as Organization[]
     }
 
-    _post(path: string, data: string | Object): Promise<object> {
+    async getRelationShip(employeeId: string): Promise<OrganizationRelationShip[]> {
+        let result = await this._post('/api/relationship/employee', { 'employeeId': employeeId } as Record<string, string>);
+        return result as OrganizationRelationShip[]
+    }
+
+    async getOrganizationEx(orgId: number): Promise<OrganizationEx> {
+        let result = await this._post('/api/organization/query_ex', { 'id': orgId } as Record<string, Object>);
+        return result as OrganizationEx
+    }
+
+    async getOrganizations(orgIds: number[]): Promise<Organization[]> {
+        let result = await this._post('/api/organization/query_list', { 'ids': orgIds } as Record<string, Object>);
+        return result as Organization[]
+    }
+
+    async getOrganizationEmployees(orgIds: number[]): Promise<Employee[]> {
+        let employeeIds = await this._post('/api/organization/batch_employees', { 'ids': orgIds } as Record<string, Object>);
+        return this.getEmployeeList(employeeIds as string[]);
+    }
+
+    async getOrgEmployees(orgId: number) {
+        let employeeIds = await this._post('/api/organization/employees', { 'ids': [orgId] } as Record<string, Object>);
+        return this.getEmployeeList(employeeIds as string[]);
+    }
+
+    async getEmployeeList(employeeIds: string[]): Promise<Employee[]> {
+        let result = await this._post('/api/employee/query_list', { 'employeeIds': employeeIds } as Record<string, Object>)
+        return result as Employee[]
+    }
+
+    async getEmployee(employeeId: string): Promise<Employee> {
+        let result = await this._post('/api/employee/query', { 'employeeId': employeeId } as Record<string, Object>);
+        return result as Employee;
+    }
+
+    async getEmployeeEx(employeeId: string): Promise<EmployeeEx> {
+        let result = await this._post('/api/employee/query_ex', { 'employeeId': employeeId } as Record<string, Object>);
+        return result as EmployeeEx;
+    }
+
+    async searchEmployee(orgId: number, keyword: string): Promise<Employee[]> {
+        let result = await this._post('/api/employee/search', { 'organizationId': orgId, 'keyword': keyword } as Record<string, Object>);
+        return result as Employee[]
+    }
+
+    async getOrganizationPath(organizationId: number): Promise<Organization[]> {
+        let pathList: Organization[] = [];
+        let org = await this._getOrganizationSync(organizationId);
+        if (org) {
+            pathList.push(org)
+            if (org.parentId) {
+                pathList.push(...await this.getOrganizationPath(org.parentId));
+            }
+        }
+        return pathList;
+    }
+
+    async _getOrganizationSync(orgId: number): Promise<Organization | null> {
+        let orgs = await this.getOrganizations([orgId])
+        return orgs && orgs.length > 0 ? orgs[0] : null;
+    }
+
+    employeeToUserInfo(employee: Employee): UserInfo {
+        let userInfo = new UserInfo();
+        userInfo.uid = employee.employeeId;
+        userInfo.name = employee.name;
+        userInfo.displayName = employee.name;
+        userInfo.portrait = employee.portraitUrl ? employee.portraitUrl : Config.DEFAULT_PORTRAIT_URL;
+        userInfo.gender = employee.gender;
+        userInfo.mobile = employee.mobile;
+        userInfo.email = employee.email;
+        userInfo.updateDt = employee.updateDt;
+        //0 normal; 1 robot; 2 thing;
+        userInfo.type = 1;
+        userInfo.deleted = 0;
+        return userInfo;
+    }
+
+    _post(path: string, data?: string | object): Promise<object> {
         return new Promise((resolve, reject) => {
             let httpRequest = http.createHttp();
             // 用于订阅HTTP响应头，此接口会比request请求先返回。可以根据业务需要订阅此消息
             // 从API 8开始，使用on('headersReceive', Callback)替代on('headerReceive', AsyncCallback)。 8+
             // httpRequest.on('headersReceive', (header) => {
             //     console.info('header: ' + JSON.stringify(header));
-                // if (header.toString() === 'authToken') {
-                //     this.authToken = header.toString();
+            // if (header.toString() === 'authToken') {
+            //     this.authToken = header.toString();
             //         let context = GlobalContext.getContext().getObject<common.ApplicationContext>('applicationContext');
             //         let preference = data_preferences.getPreferencesSync(context, {
             //             name: 'wfcstore'
             //         })
             //         let _url = url.URL.parseURL(this.baseUrl)
             //         preference.put(`authToken-${_url.host}-${_url.port}`, this.authToken)
-                // }
+            // }
             // });
             console.log('request', path, data)
             httpRequest.request(// 填写HTTP请求的URL地址，可以带参数也可以不带参数。URL地址需要开发者自定义。请求的参数可以在extraData中指定
@@ -127,7 +213,7 @@ class AppServer {
                         }
                         resolve(result.result)
                     } else {
-                        reject(new AppServerError(result.code as number, result.message as string))
+                        reject(new OrgServerError(result.code as number, result.message as string))
                     }
                 } else {
                     console.info('error:' + JSON.stringify(err));
@@ -136,7 +222,7 @@ class AppServer {
                     // 当该请求使用完毕时，调用destroy方法主动销毁。
                     httpRequest.destroy();
                     console.error('err', err)
-                    reject(new AppServerError(-1, err.message))
+                    reject(new OrgServerError(-1, err.message))
                 }
             }
             )
@@ -144,7 +230,7 @@ class AppServer {
     }
 }
 
-let self = new AppServer();
+let self = new OrgServer();
 
 export default self
 
