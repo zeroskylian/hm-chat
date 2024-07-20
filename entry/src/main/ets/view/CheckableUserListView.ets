@@ -3,19 +3,32 @@ import UserInfo from '../wfc/model/userInfo'
 import { UIUserInfo } from '../common/Types'
 import BasicDataSource from '../common/BasicDataSource'
 import { groupUserInfos } from '../helper/asyncTaskHelper'
+import { showToast } from '../common/utils/Toast'
+import Organization from '../api/model/organization'
+import orgServer from '../api/orgServer'
+import { navigationDestinations } from '../pages/navigationConfig'
+import PickOrganizationMemberModal from '../pages/organization/PickOrganizationMemberModal'
+import Employee from '../api/model/employee'
 
 @Component
 export default struct CheckableUserListView {
     @Link checkedUsers: UserInfo[]
+    @Link @Watch('onCheckEmployee') checkedEmployees: Employee[]
+    @Link @Watch('onCheckOrganization') checkedOrganizations: Organization[]
     @State filteredUserInfos: UserInfo[] = []
     @State searchInputViewMaxWidth: string = '100%'
     @State userInfoDataSource?: UserInfoDataSource = undefined
-    private userInfos: UserInfo[] = []
-    private showCategory: boolean = false
-    private uncheckableUserIds: string[] = []
-    private initialCheckedUserIds: string[] = []
-    private showSearchView: boolean = false
+    userInfos: UserInfo[] = []
+    showCategory: boolean = false
+    uncheckableUserIds: string[] = []
+    initialCheckedUserIds: string[] = []
+    showSearchView: boolean = false
+    showOrganization: boolean = false
+    showFavGroup: boolean = false
+    @State organizations?: Organization[] = []
     private checkedUserListScroller: Scroller = new Scroller()
+    // @Consume('mainNavPathStack') mainNavPathStack: NavPathStack;
+    @State showPickOrganizationModal: boolean = false
 
     aboutToAppear() {
         this.filteredUserInfos = this.userInfos
@@ -23,6 +36,27 @@ export default struct CheckableUserListView {
             this.userInfoDataSource = new UserInfoDataSource();
             this.userInfoDataSource.setUserInfos(userInfos)
         })
+
+        if (this.showOrganization) {
+            orgServer.getRootOrganization()
+                .then(orgs => {
+                    this.organizations = orgs;
+                })
+        }
+    }
+
+    onCheckEmployee() {
+
+    }
+
+    onCheckOrganization() {
+        let newlyCheckedUsers = this.checkedUsers.filter(info => this.uncheckableUserIds.indexOf(info.uid) === -1)
+        let checkedUserWidth = 100 / 8 * (newlyCheckedUsers.length + this.checkedOrganizations.length + this.checkedEmployees.length)
+        if (checkedUserWidth > 75) {
+            this.searchInputViewMaxWidth = '25%'
+        } else {
+            this.searchInputViewMaxWidth = (100 - checkedUserWidth) + '%'
+        }
     }
 
     onCheckUser = (info: UserInfo, checked?: boolean) => {
@@ -38,12 +72,13 @@ export default struct CheckableUserListView {
         }
 
         let newlyCheckedUsers = this.checkedUsers.filter(info => this.uncheckableUserIds.indexOf(info.uid) === -1)
-        let checkedUserWidth = 100 / 8 * newlyCheckedUsers.length
+        let checkedUserWidth = 100 / 8 * (newlyCheckedUsers.length + this.checkedOrganizations.length + this.checkedEmployees.length)
         if (checkedUserWidth > 75) {
             this.searchInputViewMaxWidth = '25%'
         } else {
             this.searchInputViewMaxWidth = (100 - checkedUserWidth) + '%'
         }
+
         this.checkedUserListScroller.scrollEdge(Edge.End)
     }
 
@@ -77,6 +112,20 @@ export default struct CheckableUserListView {
         return false
     }
 
+    @Builder
+    pickOrganizationModal(org: Organization) {
+        PickOrganizationMemberModal({
+            showPickOrganizationModal: $showPickOrganizationModal,
+            checkedEmployees: $checkedEmployees,
+            checkedOrganizations: $checkedOrganizations,
+            curOrganization: org
+        })
+            .height('100%')
+            .width('100%')
+            .margin({ top: px2vp(AppStorage.get<number>('SafeAreaTopHeight')) })
+            .backgroundColor(Color.White)
+    }
+
     build() {
         Column() {
             if (this.showSearchView) {
@@ -93,6 +142,35 @@ export default struct CheckableUserListView {
                                 })
                         }
                     }, (info: UserInfo) => info.uid + '-' + info.updateDt)
+
+                    ForEach(this.checkedOrganizations, (org: Organization) => {
+                        ListItem() {
+                            Image(org.portraitUrl)
+                                .alt($r('app.media.ic_deparment'))
+                                .width(40)
+                                .height(40)
+                                .borderRadius(4)
+                                .margin({ left: 10 })
+                                .onClick(() => {
+                                    this.checkedOrganizations = this.checkedOrganizations.filter(o => o.id !== org.id)
+                                })
+                        }
+                    }, (org: Organization) => 'org-' + org.id)
+
+                    ForEach(this.checkedEmployees, (employee: Employee) => {
+                        ListItem() {
+                            Image(employee.portraitUrl)
+                                .alt($r('app.media.avatar_def'))
+                                .width(40)
+                                .height(40)
+                                .borderRadius(4)
+                                .margin({ left: 10 })
+                                .onClick(() => {
+                                    this.checkedEmployees = this.checkedEmployees.filter(e => e.employeeId !== employee.employeeId)
+                                })
+                        }
+                    }, (e: Employee) => e.employeeId)
+
                     ListItem() {
                         Row() {
                             TextInput({ placeholder: '搜索' })
@@ -114,6 +192,85 @@ export default struct CheckableUserListView {
             }
             if (this.userInfoDataSource) {
                 List() {
+                    ListItemGroup() {
+                        if (this.organizations && this.organizations.length > 0) {
+                            ForEach(this.organizations, (org: Organization, index: number) => {
+                                ListItem() {
+                                    Row() {
+                                        Image(org.portraitUrl)
+                                            .alt($r('app.media.ic_organization'))
+                                            .width(40)
+                                            .height(40)
+                                            .borderRadius(4)
+                                        Text(org.name)
+                                            .maxLines(1)
+                                            .padding({ left: 10 })
+                                    }
+                                    .height(60)
+                                    .width('100%')
+                                    .padding({ left: 10, right: 10 })
+                                    .stateStyles({
+                                        pressed: {
+                                            .backgroundColor('#E5E5E5')
+                                        },
+                                        normal: {
+                                            .backgroundColor(Color.White)
+                                        }
+                                    })
+                                    .onClick(() => {
+                                        this.showPickOrganizationModal = true
+                                        // this.mainNavPathStack.pushPathByName(navigationDestinations.PickOrganizationMemberPage, {
+                                        //     'organization': org
+                                        // } as Record<string, Object>)
+                                        // router.pushUrl({
+                                        //     url: 'pages/organization/PickOrganizationMemberPage',
+                                        //     params: {
+                                        //         organization: org
+                                        //     }
+                                        // }, router.RouterMode.Standard)
+                                    })
+                                }
+                                .bindContentCover($$this.showPickOrganizationModal,
+                                    this.pickOrganizationModal(org),
+                                    {
+                                        // transition: TransitionEffect.SLIDE,
+                                        modalTransition: ModalTransition.NONE,
+                                        onDisappear: () => {
+                                        }
+                                    })
+                            }, (org: Organization, index: number) => org.id + '')
+                        }
+
+                        if (this.showFavGroup) {
+                            ListItem() {
+                                Row() {
+                                    Image($r('app.media.ic_group_chat'))
+                                        .width(40)
+                                        .height(40)
+                                        .borderRadius(4)
+                                    Text('群聊(保存到通讯录的群组)')
+                                        .maxLines(1)
+                                        .padding({ left: 10 })
+                                }
+                                .height(60)
+                                .width('100%')
+                                .padding({ left: 10, right: 10 })
+                                .stateStyles({
+                                    pressed: {
+                                        .backgroundColor('#E5E5E5')
+                                    },
+                                    normal: {
+                                        .backgroundColor(Color.White)
+                                    }
+                                })
+                                .onClick(() => {
+                                    showToast('todo favGroup')
+                                })
+                            }
+                        }
+                    }
+                    .divider({ strokeWidth: 1, startMargin: 10 })
+
                     LazyForEach(this.userInfoDataSource, (info: UIUserInfo) => {
                         ListItem() {
                             CheckableUserItemView({

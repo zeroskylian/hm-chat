@@ -5,6 +5,8 @@ import { UIUserInfo } from '../common/Types'
 import BasicDataSource from '../common/BasicDataSource'
 import { loadAndGroupContactUserInfos } from '../helper/asyncTaskHelper'
 import { navigationDestinations } from './navigationConfig'
+import orgServer from '../api/orgServer'
+import Config from '../config'
 
 interface ContactListHeader {
     title: string,
@@ -64,6 +66,7 @@ export default struct ContactListTab {
 
 
         this.loadContact()
+        this.loadMyOrganization()
         wfc.eventEmitter!.on(EventType.ConnectionStatusChanged, this.onConnectionStatusChange)
     }
 
@@ -78,24 +81,44 @@ export default struct ContactListTab {
     }
 
     loadContact() {
-        // let favUserInfos: UserInfo[] = []
-        // let favUserIds = wfc.getFavUsers()
-        // if (favUserIds.length > 0) {
-        //     favUserInfos = wfc.getUserInfos(favUserIds, '')
-        //     let groupedFavContactUserInfos: UIUserInfo[] = []
-        //     for (let i = 0; i < favUserInfos.length; i++) {
-        //         groupedFavContactUserInfos.push({
-        //             showCategory: i === 0,
-        //             category: '☆',
-        //             userInfo: favUserInfos[i]
-        //         })
-        //     }
-        //     this.contactDataSource.setFavContactInfos(groupedFavContactUserInfos)
-        // }
-
         loadAndGroupContactUserInfos().then(groupedUserInfos => {
             let groupedContactUserInfos = groupedUserInfos;
             this.contactDataSource.setContactInfos(groupedContactUserInfos)
+        })
+    }
+
+    async loadMyOrganization() {
+        if (!Config.ORGANIZATION_SERVER) {
+            return
+        }
+        let rootOrgs = await orgServer.getRootOrganization()
+        rootOrgs.forEach(org => {
+            this.contactListHeaders.push({
+                title: org.name,
+                icon: $r('app.media.ic_organization'),
+                badgeCount: 0,
+                badgeValue: '',
+                action: () => {
+                    this.mainNavPathStack.pushPathByName(navigationDestinations.OrganizationTreePage, { 'organization': org } as Record<string, Object>)
+                }
+            })
+        })
+
+        let myOrgRelations = await orgServer.getRelationShip(wfc.getUserId())
+        let orgIds = myOrgRelations.map(rs => rs.organizationId)
+        let myOrgs = await orgServer.getOrganizations(orgIds)
+        myOrgs.forEach(org => {
+            this.contactListHeaders.push({
+                title: org.name,
+                icon: $r('app.media.ic_organization_expended'),
+                badgeCount: 0,
+                badgeValue: '',
+                action: () => {
+                    // this.mainNavPathStack.pushPathByName(navigationDestinations.ChannelListPage, {} as Record<string, Object>)
+                    // TODO
+                }
+            })
+
         })
     }
 
@@ -246,6 +269,7 @@ export default struct ContactListTab {
             .height('100%')
             .width('100%')
             .justifyContent(FlexAlign.Start)
+            .backgroundColor(Color.White)
             .padding({ top: 5 })
 
             AlphabetIndexer({ arrayValue: this.contactCategories, selected: 0 })

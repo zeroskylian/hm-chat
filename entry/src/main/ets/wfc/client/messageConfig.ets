@@ -618,7 +618,7 @@ export default class MessageConfig {
     ];
 }
 
-class MessageContentConfig {
+export class MessageContentConfig {
     name = '';
     flag = 0;
     type = 0

@@ -21,6 +21,7 @@ import WorkSpaceTab from './WorkSpaceTab'
 import Config from '../config'
 import { checkPermissions, requestPermissions } from '../helper/permissionHelper'
 import { navigationDestinations, PagesMap } from './navigationConfig'
+import orgServer from '../api/orgServer'
 
 const TAG = 'Main';
 
@@ -52,12 +53,15 @@ struct MainPage {
     @State showPickContactModal: boolean = false
     @Provide('mainNavPathStack') mainNavPathStack: NavPathStack = new NavPathStack()
     @LocalStorageProp('targetConversation') @Watch('onTargetConversation') targetConversation?: Conversation = undefined
+    @LocalStorageLink('pickContactResult') @Watch('onPickContact') pickedUsers: UserInfo[] = []
 
     onTargetConversation() {
         let conversation = this.targetConversation
         if (conversation) {
             storage.delete('targetConversation')
             wfc.clearConversationUnreadStatus(conversation!)
+            // TODO
+            // FIXME
             // https://developer.huawei.com/consumer/cn/doc/harmonyos-references-V5/js-apis-arkui-observer-V5?catalogVersion=V5
             //  会话页面，监听 observer.on('navDestinationUpdate')
             let index = this.mainNavPathStack.popToName(navigationDestinations.ConversationPage)
@@ -70,6 +74,13 @@ struct MainPage {
                     'conversation': conversation
                 } as Record<string, Object>)
             }
+        }
+    }
+
+    onPickContact() {
+        if (this.pickedUsers.length > 0) {
+            this.createConversation(this.pickedUsers)
+            this.pickedUsers = [];
         }
     }
 
@@ -135,6 +146,10 @@ struct MainPage {
             if (ungrantedPermissions.length > 0) {
                 showToast(`请授予相关权限，否则不能正常工作 ${ungrantedPermissions[0]}`)
             }
+        }
+
+        if (Config.ORGANIZATION_SERVER) {
+            orgServer.login()
         }
     }
 
@@ -238,20 +253,10 @@ struct MainPage {
                 .padding(6)
                 .margin({ left: 12 })
                 .bindMenu(this.SubMoreMenus())
-                .bindContentCover(this.showPickContactModal, this.pickContactModal(), {
+                .bindContentCover($$this.showPickContactModal, this.pickContactModal(), {
                     modalTransition: ModalTransition.DEFAULT,
                     onAppear: () => {
                     },
-
-                    onDisappear: () => {
-                        this.showPickContactModal = false
-                        let localStorage = LocalStorage.getShared();
-                        let pickUsers = localStorage.get<UserInfo[]>(PickContactModal.PICK_RESULT);
-                        if (pickUsers?.length) {
-                            this.createConversation(pickUsers)
-                            localStorage.delete(PickContactModal.PICK_RESULT)
-                        }
-                    }
                 })
         }
         .margin({ right: 18 })
