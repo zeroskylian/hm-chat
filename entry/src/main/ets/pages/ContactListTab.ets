@@ -40,7 +40,7 @@ export default struct ContactListTab {
             }
         },
         {
-            title: '群组',
+            title: '群组(保存到通讯录的群组)',
             icon: $r('app.media.ic_group_chat'),
             badgeCount: 0,
             badgeValue: '',
@@ -274,7 +274,7 @@ export default struct ContactListTab {
 
             AlphabetIndexer({ arrayValue: this.contactCategories, selected: 0 })
                 .selectedColor(0xFFFFFF)// 选中项文本颜色
-                .popupColor(0xFFFAF0)// 弹出框文本颜色
+                .popupColor(Color.Black)// 弹出框文本颜色
                 .selectedBackgroundColor(0xCCCCCC)// 选中项背景颜色
                 .popupBackground(0xD2B48C)// 弹出框背景颜色
                 .usingPopup(true)// 是否显示弹出框

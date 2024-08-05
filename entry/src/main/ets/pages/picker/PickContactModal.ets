@@ -1,10 +1,13 @@
 import UserInfo from '../../wfc/model/userInfo'
-import wfc from '../../wfc/client/wfc'
+import Conversation from '../../wfc/model/conversation'
+import ConversationType from '../../wfc/model/conversationType'
 import CheckableUserListView from '../../view/CheckableUserListView'
 import { loadContactUserInfos } from '../../helper/asyncTaskHelper'
 import Organization from '../../api/model/organization'
 import Employee from '../../api/model/employee'
 import orgServer from '../../api/orgServer'
+import GroupInfo from '../../wfc/model/groupInfo'
+import { navigationDestinations } from '../navigationConfig'
 
 @Component
 export default struct PickContactModal {
@@ -12,12 +15,18 @@ export default struct PickContactModal {
     @State checkedOrganizations: Organization[] = []
     @State checkedEmployees: Employee[] = []
     @State userInfos?: UserInfo[] = undefined
+    @State @Watch('_onCheckFavGroup') checkedFavGroupInfo?: GroupInfo = undefined
     initialCheckedUserIds: string[] = []
     uncheckableUserIds: string[] = []
     organization?: Organization
     public static PICK_RESULT: string = 'pickContactResult'
     @Link showPickContactModal: boolean
-    @LocalStorageLink('pickContactResult') pickContactResult: UserInfo[] = []
+    onCheckFavGroup?: (info: GroupInfo) => void
+    onCheckUser?: (users: UserInfo[]) => void
+
+    // TODO
+    // fixme
+    // 添加选人结束、选中favGroup 的处理方法
 
     aboutToAppear() {
         loadContactUserInfos().then((userinfos: UserInfo[]) => {
@@ -30,20 +39,13 @@ export default struct PickContactModal {
         })
     }
 
-    onCheckUser = (info: UserInfo, checked?: boolean) => {
-        let index = this.checkedUsers.findIndex(checkedUser => checkedUser.uid === info.uid)
-        if (checked) {
-            if (index < 0) {
-                this.checkedUsers.push(info)
-            }
-        } else {
-            if (index >= 0) {
-                this.checkedUsers.splice(index, 1)
-            } else {
-                this.checkedUsers.push(info)
-            }
+    _onCheckFavGroup() {
+        if (this.checkedFavGroupInfo) {
+            this.onCheckFavGroup?.(this.checkedFavGroupInfo)
+            this.showPickContactModal = false;
         }
     }
+
 
     newlyCheckedUsers(): UserInfo[] {
         return this.checkedUsers.filter(info => this.initialCheckedUserIds.indexOf(info.uid) === -1)
@@ -79,6 +81,7 @@ export default struct PickContactModal {
                             checkedUsers: $checkedUsers,
                             checkedEmployees: $checkedEmployees,
                             checkedOrganizations: $checkedOrganizations,
+                            checkedFavGroupInfo: $checkedFavGroupInfo,
                             userInfos: this.userInfos,
                             uncheckableUserIds: this.initialCheckedUserIds,
                             showCategory: true,
@@ -120,7 +123,8 @@ export default struct PickContactModal {
                 .fontSize(14)
                 .borderRadius(4)// .backgroundColor(Color.Blue)
                 .onClick(async () => {
-                    this.pickContactResult = await this.allNewlyCheckedUsers();
+                    let users = await this.allNewlyCheckedUsers();
+                    this.onCheckUser?.(users)
                     this.showPickContactModal = false
                 })
         }
