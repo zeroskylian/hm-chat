@@ -485,7 +485,7 @@ export default class MessageConfig {
         },
         {
             name: 'changeGroupPortraitNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.ChangeGroupPortrait_Notification,
         },
         {
@@ -500,7 +500,7 @@ export default class MessageConfig {
         },
         {
             name: 'kickoffGroupMemberNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.KickOffGroupMember_Notification,
         },
         {
@@ -525,7 +525,7 @@ export default class MessageConfig {
         },
         {
             name: 'quitGroupNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.QuitGroup_Notification,
         },
         {
