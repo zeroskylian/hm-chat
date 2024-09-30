@@ -58,4 +58,10 @@ export default class UserOnlineState {
         //return '不在线';
         return '';
     }
+
+    isDeskTopOnline(): boolean {
+        return this.clientStates.filter((client) => {
+            return (client.platform === 3 || client.platform === 4) && client.state === 0
+        }).length > 0
+    }
 }

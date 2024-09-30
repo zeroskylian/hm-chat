@@ -1,36 +1,49 @@
 {
-    "app": {
-        "signingConfigs": [
-        ],
-        "products": [
-            {
-                "name": "default",
-                "signingConfig": "default",
-                "compatibleSdkVersion": "5.0.0(12)",
-                "runtimeOS": "HarmonyOS",
-            }
-        ]
-    },
-    "modules": [
-        {
-            "name": "chat",
-            "srcPath": "./chat",
-            "targets": [
-                {
-                    "name": "default",
-                    "applyToProducts": [
-                        "default"
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "client",
-            "srcPath": "./client",
-        },
-        {
-            "name": "uikit",
-            "srcPath": "./uikit",
+  "app": {
+    "signingConfigs": [
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.cer",
+          "storePassword": "0000001B249DF79C1FBD592E49A5FD8DB6F73FF57C7DA10DF1C65AD269F4399B7EF18F4B740864BA2F0BBC",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001BF75883808BB4B5424F6CC543FFEEFB8AC0CD6FCDD28EC0537AF947FE17FA27933BF33DAF43D80E",
+          "profile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p12"
         }
+      }
+    ],
+    "products": [
+      {
+        "name": "default",
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+      }
     ]
+  },
+  "modules": [
+    {
+      "name": "chat",
+      "srcPath": "./chat",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": [
+            "default"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "client",
+      "srcPath": "./client",
+    },
+    {
+      "name": "uikit",
+      "srcPath": "./uikit",
+    }
+  ]
 }
