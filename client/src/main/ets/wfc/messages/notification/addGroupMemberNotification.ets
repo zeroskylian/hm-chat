@@ -5,13 +5,13 @@
 import wfc from '../../client/wfc'
 import MessageContentType from '../messageContentType';
 import MessagePayload from '../messagePayload';
-
 import GroupNotificationContent from './groupNotification';
 
 export default class AddGroupMemberNotification extends GroupNotificationContent {
     invitor = '';
     invitees = [] as string[];
     approver = ''
+    ex?: object | string
 
     constructor(invitor: string = '', invitees: string[] = []) {
         super(MessageContentType.AddGroupMember_Notification);
@@ -57,6 +57,7 @@ export default class AddGroupMemberNotification extends GroupNotificationContent
             o: this.invitor,
             n: this.approver,
             ms: this.invitees,
+            ex: this.ex
         } as Data;
         payload.binaryContent = wfc.utf8_to_b64(JSON.stringify(obj));
         return payload;
@@ -70,6 +71,7 @@ export default class AddGroupMemberNotification extends GroupNotificationContent
         this.invitor = obj.o;
         this.invitees = obj.ms;
         this.approver = obj.n;
+        this.ex = obj.ex
     }
 }
 
@@ -78,4 +80,5 @@ class Data {
     o = '';
     n = '';
     ms = [] as string[]
+    ex?: object | string
 }
