@@ -40,9 +40,13 @@ export default class ImageMessageContent extends MediaMessageContent {
         super.decode(payload);
         this.thumbnail = payload.binaryContent;
         if (payload.content) {
-            let obj = JSON.parse(payload.content) as ImageSize
-            this.imageWidth = obj.w;
-            this.imageHeight = obj.h;
+            try {
+                let obj = JSON.parse(payload.content) as ImageSize
+                this.imageWidth = obj.w;
+                this.imageHeight = obj.h;
+            } catch (e) {
+                console.log(e);
+            }
         }
     }
 }
