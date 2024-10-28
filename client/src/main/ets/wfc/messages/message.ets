@@ -216,4 +216,51 @@ export default class Message {
     static toMessagePayload(message: Message): MessagePayload {
         return message.messageContent!.encode();
     }
+
+    static fromProtoMessageWithConversation(obj: Record<string, Object>, conversation: Conversation): Message | null {
+        if (!obj) {
+            return null;
+        }
+        // iOS，Android，Windows，OSX
+        if ([1, 2, 3, 4, 7, 8, 9, 10, 11, 12].indexOf(Config.getWFCPlatform()) >= 0) {
+            let payload = obj.content as MessagePayload
+            let content = CustomMessageConfig.newCustomMessageContent(payload.type);
+            if (!content) {
+                content = MessageConfig.newMessageContent(payload.type);
+            }
+
+            let msg = assign(new Message(conversation, content), obj) as Message;
+            msg.conversation = conversation;
+            // big integer to number
+            msg.messageId = Number(msg.messageId);
+            msg.messageUid = Long.fromValue(msg.messageUid);
+            msg.timestamp = Long.fromValue(msg.timestamp).toNumber();
+            msg.localExtra = obj.localExtra as string;
+            if (!msg.from) {
+                // 移动端
+                msg.from = obj.sender as string;
+            }
+            try {
+                content.decode(payload);
+                if (content instanceof NotificationMessageContent) {
+                    content.fromSelf = msg.from === wfc.getUserId();
+                }
+            } catch (error) {
+                console.error('decode message payload failed, fallback to unkownMessage', msg.content?.type, msg.content, error);
+                let flag = MessageConfig.getMessageContentPersitFlag(payload.type);
+                if (PersistFlag.Persist === flag || PersistFlag.Persist_And_Count === flag) {
+                    content = new UnknownMessageContent(payload);
+                } else {
+                    return null;
+                }
+            }
+            msg.messageContent = content;
+            if (content instanceof UnknownMessageContent) {
+                console.log('unknownMessage Content', obj)
+            }
+            return msg;
+        } else {
+            return null
+        }
+    }
 }
