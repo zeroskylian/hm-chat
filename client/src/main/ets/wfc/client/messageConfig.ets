@@ -482,7 +482,7 @@ export default class MessageConfig {
         },
         {
             name: 'groupJoinTypeNotificationContent',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.ChangeJoinType_Notification,
         },
         {
