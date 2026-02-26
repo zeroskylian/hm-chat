@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001BBD9F5BB3B200F5C389FE5120DE573ABA1141A284D4DA47BD4B4ADF4E903F12EDD3D6634A93C6BF",
+          "keyPassword": "0000001BA61B1E340D1D3F56B9CBFA285F0FBE55980D1B3424F83F1F8797540BEEA2A5DEBBE86195E3900C",
           "profile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p12",
-          "storePassword": "0000001B0F5F9478ECD4F850B1B103334883A65065FEF7790ADCC406C9C1EAB77DF016FCF605AE16FDCD00"
+          "storePassword": "0000001B65DAA444A88D2F8AEE9D708D00B1A8D97D4B2BA353AABFA8BD03191C1295CC90ADD1E865885010"
         }
       }
     ],
@@ -19,9 +19,10 @@
       {
         "name": "default",
         "signingConfig": "default",
-        "compatibleSdkVersion": "6.0.0(20)",
+        "compatibleSdkVersion": "5.0.0(12)",
         "runtimeOS": "HarmonyOS",
-        "targetSdkVersion": "6.1.1(24)"
+        "arkTSVersion": "1.0",
+        "targetSdkVersion": "6.0.0(20)"
       }
     ]
   },
