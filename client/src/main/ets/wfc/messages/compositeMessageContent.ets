@@ -11,6 +11,8 @@ import ArticlesMessageContent from "./articlesMessageContent";
 import MessageContentMediaType from "./messageContentMediaType";
 import assign from '../util/assign';
 import fs from '@ohos.file.fs';
+import ImageMessageContent from "./imageMessageContent";
+import VideoMessageContent from "./videoMessageContent";
 
 export default class CompositeMessageContent extends MediaMessageContent {
     title = '';
@@ -65,6 +67,11 @@ export default class CompositeMessageContent extends MediaMessageContent {
         let binArr: Record<string, Object>[] | undefined;
         let size = 0;
         this.messages.forEach(msg => {
+            if (msg.messageContent instanceof ImageMessageContent) {
+                msg.messageContent.thumbnail = ""
+            } else if (msg.messageContent instanceof VideoMessageContent) {
+                msg.messageContent.thumbnail = ""
+            }
             let msgPayload = msg.messageContent.encode();
             let o: Record<string, Object> = {
                 'uid': stringValue(msg.messageUid),
