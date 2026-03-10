@@ -515,12 +515,12 @@ export default class MessageConfig {
         },
         {
             name: 'modifyGroupExtraNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.ModifyGroupExtra_Notification,
         },
         {
             name: 'modifyGroupMemberExtraNotification',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.ModifyGroupMemberExtra_Notification,
         },
         {
