@@ -11,7 +11,6 @@ import MessageContentType from '../messages/messageContentType';
 import PersistFlag from '../messages/persistFlag';
 import TipNotificationMessageContent from '../messages/notification/tipNotification';
 import UnknownMessageContent from '../messages/unknownMessageContent';
-import UnsupportMessageContent from '../messages/unsupportMessageConten';
 import ChangeGroupNameNotification from '../messages/notification/changeGroupNameNotification';
 import KickoffGroupMemberNotification from '../messages/notification/kickoffGroupMemberNotification';
 import KickoffGroupMemberVisiableNotification from '../messages/notification/kickoffGroupMemberVisiableNotification';
@@ -424,7 +423,7 @@ export default class MessageConfig {
         },
         {
             name: 'tip',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.Transparent,
             type: MessageContentType.Tip_Notification,
         },
         {
@@ -514,7 +513,7 @@ export default class MessageConfig {
         },
         {
             name: 'groupMuteNotificationContent',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.MuteGroup_Notification,
         },
         {
@@ -524,17 +523,17 @@ export default class MessageConfig {
         },
         {
             name: 'groupSetManagerNotificationContent',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.SetGroupManager_Notification,
         },
         {
             name: 'muteGroupMemberNotificationContent',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.MuteGroupMember_Notification,
         },
         {
             name: 'allowGroupMemberNotificationContent',
-            flag: PersistFlag.Persist,
+            flag: PersistFlag.No_Persist,
             type: MessageContentType.AllowGroupMember_Notification,
         },
         {
