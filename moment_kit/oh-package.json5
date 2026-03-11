@@ -8,7 +8,8 @@
     "dependencies": {
 //        "@wfc/moment_client": "file:../moment_client",
         "@wfc/moment_client": "file:./libs/moment_client.har",
-        "@wfc/client": "file:../client"
+        "@wfc/client": "file:../client",
+        "@wfc/uikit": "file:../uikit"
     }
 }
 
