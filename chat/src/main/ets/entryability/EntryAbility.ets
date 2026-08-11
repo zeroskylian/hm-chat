@@ -25,6 +25,7 @@ import { isImage, isVideo } from '@wfc/uikit/src/main/ets/util/helper';
 import { ShareItem } from '@wfc/uikit/src/main/ets/common/Types';
 import waterMarkWindow from '@wfc/uikit/src/main/ets/common/watermark/waterMarkWindow';
 import { windowSizeManager } from '@wfc/uikit/src/main/ets/util/windowSizeManager';
+import { loadMomentModule } from '../util/momentModuleLoader';
 
 export default class EntryAbility extends UIAbility {
     private windowStage?: window.WindowStage
@@ -49,6 +50,8 @@ export default class EntryAbility extends UIAbility {
         wfc.init(this.applicationContext, this.context.eventHub, this.applicationContext.filesDir, Config.getWFCPlatform());
         CustomMessageConfig.registerCustomMessages();
         uikit.init(this.context)
+        // 动态加载朋友圈模块：依赖存在时注册路由并显示入口，不存在时静默降级（fire-and-forget，不阻塞启动）
+        loadMomentModule()
 
         wfc.eventEmitter!.on(EventType.ConnectionStatusChanged, async (status: number) => {
             this.connectionStatus = status;

@@ -1560,6 +1560,14 @@ export class WfcManager {
     }
 
     /**
+     * 是否允许朋友圈
+     * @returns {boolean}
+     */
+    isAllowMoments(): boolean {
+        return impl.isAllowMoments();
+    }
+
+    /**
      * 获取自己是否开启密聊
      * @returns
      */

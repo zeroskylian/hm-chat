@@ -1,12 +1,13 @@
 import { UIKitPageMap, UIKIT_NAV_DESTINATION_PREFIX } from "@wfc/uikit/src/main/ets/pages/uikitNavigationConfig"
-// 如果需要支持朋友圈时，请取消注释
-import { MomentPageMap, MOMENT_NAV_DESTINATION_PREFIX } from "@wfc/momentkit"
 import AboutPage from "./me/AboutPage"
 import AccountPage from "./me/AccountPage"
 import ChangePasswordPage from "./me/ChangePasswordPage"
 import DestroyAccountPage from "./me/DestroyAccountPage"
 import ResetPasswordPage from "./me/ResetPasswordPage"
 import SettingPage from "./me/SettingPage"
+import PrivacySettingPage from "./me/PrivacySettingPage"
+import FindMeSettingPage from "./me/FindMeSettingPage"
+import BlackListPage from "./me/BlackListPage"
 import FontSizeSettingPage from "./me/FontSizeSettingPage"
 import TestPage from "./test/TestPage"
 import BackupAndRestorePage from "./backup/BackupAndRestorePage"
@@ -23,6 +24,8 @@ import PCRestoreListPage from "./backup/PCRestoreListPage"
 import PCRestoreProgressPage from "./backup/PCRestoreProgressPage"
 
 const APP_NAV_DESTINATION_PREFIX = 'app-'
+// 朋友圈路由前缀，与 @wfc/moment 的 MOMENT_NAV_DESTINATION_PREFIX 保持一致（不允许静态 import，此处本地定义）
+const MOMENT_NAV_DESTINATION_PREFIX = 'moment_'
 
 export class appNavigationDestinations {
     static AboutPage = APP_NAV_DESTINATION_PREFIX + 'aboutPage'
@@ -30,6 +33,9 @@ export class appNavigationDestinations {
     static ResetPasswordPage = APP_NAV_DESTINATION_PREFIX + 'resetPasswordPage'
     static ChangePasswordPage = APP_NAV_DESTINATION_PREFIX + 'changePasswordPage'
     static SettingPage = APP_NAV_DESTINATION_PREFIX + 'settingPage'
+    static PrivacySettingPage = APP_NAV_DESTINATION_PREFIX + 'privacySettingPage'
+    static FindMeSettingPage = APP_NAV_DESTINATION_PREFIX + 'findMeSettingPage'
+    static BlackListPage = APP_NAV_DESTINATION_PREFIX + 'blackListPage'
     static FontSizeSettingPage = APP_NAV_DESTINATION_PREFIX + 'fontSizeSettingPage'
     static DestroyAccountPage = APP_NAV_DESTINATION_PREFIX + 'destroyAccountPage'
     static BackupAndRestorePage = APP_NAV_DESTINATION_PREFIX + 'backupAndRestorePage'
@@ -58,6 +64,12 @@ export function AppPageMap(name: string) {
         ChangePasswordPage()
     } else if (name === appNavigationDestinations.SettingPage) {
         SettingPage()
+    } else if (name === appNavigationDestinations.PrivacySettingPage) {
+        PrivacySettingPage()
+    } else if (name === appNavigationDestinations.FindMeSettingPage) {
+        FindMeSettingPage()
+    } else if (name === appNavigationDestinations.BlackListPage) {
+        BlackListPage()
     } else if (name === appNavigationDestinations.FontSizeSettingPage) {
         FontSizeSettingPage()
     } else if (name === 'testPage') {
@@ -91,15 +103,38 @@ export function AppPageMap(name: string) {
     }
 }
 
+/**
+ * 朋友圈 NavDestination 动态分派：路由表由 momentModuleLoader 动态 import @wfc/moment 后
+ * 以 WrappedBuilder 形式写入 AppStorage；模块不可用时落到 not found。
+ */
+@Component
+export struct MomentDynamicDest {
+    name: string = ''
+    @StorageLink('momentPageMapBuilder') momentPageMapBuilder: WrappedBuilder<[string]> | undefined = undefined
+
+    build() {
+        if (this.momentPageMapBuilder) {
+            this.momentPageMapBuilder.builder(this.name)
+        } else {
+            NavDestination() {
+                Column() {
+                    Text('Nav destination not found')
+                }
+                .width('100%')
+                .height('100%')
+            }
+        }
+    }
+}
+
 @Builder
 export function MainPageMap(name: string) {
     if (name.startsWith(APP_NAV_DESTINATION_PREFIX)) {
         AppPageMap(name)
     } else if (name.startsWith(UIKIT_NAV_DESTINATION_PREFIX)) {
         UIKitPageMap(name)
-        // 如果需要支持朋友圈时，请取消注释
     } else if (name.startsWith(MOMENT_NAV_DESTINATION_PREFIX)) {
-        MomentPageMap(name);
+        MomentDynamicDest({ name: name })
     } else {
         NavDestination() {
             Column() {

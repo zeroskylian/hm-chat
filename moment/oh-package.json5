@@ -1,0 +1,12 @@
+{
+    "name": "@wfc/moment",
+    "version": "1.0.0",
+    "description": "野火朋友圈 SDK 与 UI 组件库",
+    "main": "Index.ets",
+    "author": "",
+    "license": "",
+    "dependencies": {
+        "@wfc/uikit": "file:../uikit",
+        "@wfc/client": "file:../client"
+    }
+}

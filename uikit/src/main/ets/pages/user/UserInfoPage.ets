@@ -20,6 +20,8 @@ import { FontSize, Radius } from '../../common/design/Tokens'
 @Component
 export default struct UserInfoPage {
     @State userInfo?: UserInfo = undefined
+    // 朋友圈入口显隐：chat 启动时动态加载 @wfc/moment 成功后写入该 AppStorage 键（uikit 不依赖 moment，纯路由名跳转）
+    @StorageProp('momentModuleAvailable') momentAvailable: boolean = false
     private isMyFriend: boolean = false
     @Consume('mainNavPathStack') mainNavPathStack: NavPathStack;
 
@@ -153,6 +155,20 @@ export default struct UserInfoPage {
                                 'name': this.userInfo!.displayName,
                                 'qrCodeValue': WfcScheme.QR_CODE_PREFIX_USER + this.userInfo!.uid,
                                 'hint': '扫描二维码，加我为好友'
+                            } as Record<string, Object>)
+                        })
+                }
+
+                if (this.momentAvailable) {
+                    OptionItemView({
+                        title: '朋友圈',
+                        showRightArrow: true,
+                        showDivider: false
+                    })
+                        .onClick(() => {
+                            // 'moment_feedListPage' 与 @wfc/moment 的 momentNavigationDestinations.FeedListPage 一致
+                            this.mainNavPathStack.pushPathByName('moment_feedListPage', {
+                                'userId': this.userInfo!.uid
                             } as Record<string, Object>)
                         })
                 }

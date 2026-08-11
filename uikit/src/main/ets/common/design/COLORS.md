@@ -31,6 +31,6 @@
 | `c_gray` | 通用灰（图标等） |
 
 ## 待办（去重）
-moment_kit / chat 各自的 `color.json` 中与 uikit 语义重复的项（如 moment_kit 的
+moment / chat 各自的 `color.json` 中与 uikit 语义重复的项（如 moment 的
 `text_primary`/`text_secondary`/`divider`/`background`）应逐步统一到 `wf_*`，
 减少多套色板。迁移时若改动相关组件，顺手替换为 `wf_*`。

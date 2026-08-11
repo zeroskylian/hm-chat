@@ -5,15 +5,17 @@ import { uikitNavigationDestinations } from '@wfc/uikit/src/main/ets/pages/uikit
 import BuildProfile from 'BuildProfile'
 import uikit from '@wfc/uikit'
 
-// 如果需要支持朋友圈时，请取消注释
-import { momentNavigationDestinations } from '@wfc/momentkit'
 import { fontSizeManager, scaledSize } from '@wfc/uikit/src/main/ets/common/design/Tokens'
 import { pushOrReplaceDetail, openConversation } from '@wfc/uikit/src/main/ets/util/navUtil'
+
+// 朋友圈路由名，与 @wfc/moment 的 momentNavigationDestinations.FeedListPage 一致（不允许静态 import，此处本地定义）
+const MOMENT_FEED_LIST_PAGE = 'moment_feedListPage'
 
 @Preview
 @Component
 export default struct DiscoveryTab {
-    @State unreadMomentCount: number = 10
+    @StorageProp('momentModuleAvailable') momentAvailable: boolean = false
+    @StorageProp('momentUnreadCount') momentUnreadCount: number = 0
     @Link discoveryTabUnreadCount: number
     @Consume('mainNavPathStack') mainNavPathStack: NavPathStack;
     @StorageProp('fontScale') fontScale: number = 1.0;
@@ -32,7 +34,7 @@ export default struct DiscoveryTab {
             List() {
                 // TODO lazyForEach https://developer.huawei.com/consumer/cn/doc/harmonyos-guides-V2/ui-ts-performance-improvement-recommendation-0000001477981001-V2
                 ListItemGroup() {
-                    if (BuildProfile.DEBUG) {
+                    if (this.momentAvailable) {
                         ListItem() {
                             Row() {
                                 Image($r('app.media.ic_moment'))
@@ -42,7 +44,7 @@ export default struct DiscoveryTab {
                                 Badge({
                                     position: BadgePosition.Right,
                                     maxCount: 99,
-                                    count: this.unreadMomentCount,
+                                    count: this.momentUnreadCount,
                                     style: { badgeSize: scaledSize(14, this.fontScale), badgeColor: $r('app.color.wf_badge_color') }
                                 }) {
                                     Text('朋友圈')
@@ -52,9 +54,7 @@ export default struct DiscoveryTab {
                                 .padding({ left: 20 })
                             }
                             .onClick(() => {
-                                // showToast('当前版本不支持朋友圈功能')
-                                // 如果需要支持朋友圈时，请取消注释
-                                pushOrReplaceDetail(this.mainNavPathStack, momentNavigationDestinations.FeedListPage)
+                                pushOrReplaceDetail(this.mainNavPathStack, MOMENT_FEED_LIST_PAGE)
                             })
                             .padding({ left: 12, right: 12 })
                             .width('100%')

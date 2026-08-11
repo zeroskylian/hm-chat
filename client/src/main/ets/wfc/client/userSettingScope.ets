@@ -34,6 +34,10 @@ export default class UserSettingScope {
     static DisableSecretChat = 24;
     static PttSilent = 25;
     static GroupRemark = 26;
+    // 找到我的方式，值为关闭搜索渠道的位掩码（1=昵称 2=账号 4=电话号码 8=用户ID）
+    static PrivacySearchable = 27;
+    // 加好友不需要验证（反向语义："1"表示不需要验证）
+    static AddFriendNoVerify = 28;
     static LockPC = 30;
 
     // 用户自定义的scope需从1000开始，以防冲突

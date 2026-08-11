@@ -3164,6 +3164,10 @@ class WfcImpl {
         return protoProxy.isEnableRemoteControl() === 1;
     }
 
+    isAllowMoments(): boolean {
+        return protoProxy.isAllowMoments() === 1;
+    }
+
     isUserEnableSecretChat(): boolean {
         return protoProxy.isUserEnableSecretChat() === 1;
     }

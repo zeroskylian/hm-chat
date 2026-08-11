@@ -4,11 +4,23 @@ import MessageContent from '../wfc/messages/messageContent';
 import PersistFlag from '../wfc/messages/persistFlag';
 import UnknownMessageContent from '../wfc/messages/unknownMessageContent';
 import CustomMessageContentType from "./customMessageContentType";
+import MomentCommentMessageContent from "./momentCommentMessageContent";
+import MomentFeedMessageContent from "./momentFeedMessageContent";
 import TestCustomMessageContent from "./testCustomMessageContent";
 import TestCustomNotificationMessageContent from "./testCustomNotificationMessageContent";
 
 export default class CustomMessageConfig {
     static CustomMessageContents: MessageContentConfig[] = [
+        {
+            name: 'momentFeedMessage', // 消息名字
+            flag: PersistFlag.Persist_And_Count, // 消息的存储类型，根据消息是否需要存储选择
+            type: CustomMessageContentType.MESSAGE_CONTENT_TYPE_FEED, // 消息类型
+        },
+        {
+            name: 'momentCommentMessage',
+            flag: PersistFlag.Persist_And_Count,
+            type: CustomMessageContentType.MESSAGE_CONTENT_TYPE_COMMENT,
+        },
         {
             name: 'testCustomMessage', // 消息名字
             flag: PersistFlag.Persist, // 消息的存储类型，根据消息是否需要存储选择
@@ -25,6 +37,12 @@ export default class CustomMessageConfig {
     static newCustomMessageContent(customMessageType: number): MessageContent | undefined {
         let content: MessageContent | undefined
         switch (customMessageType) {
+            case CustomMessageContentType.MESSAGE_CONTENT_TYPE_FEED:
+                content = new MomentFeedMessageContent();
+                break;
+            case CustomMessageContentType.MESSAGE_CONTENT_TYPE_COMMENT:
+                content = new MomentCommentMessageContent();
+                break;
             case CustomMessageContentType.MESSAGE_CONTENT_TYPE_CUSTOM_MESSAGE_TEST:
                 content = new TestCustomMessageContent();
                 break;

@@ -45,15 +45,13 @@ export default struct SettingPage {
     build() {
         NavDestination() {
             Column() {
-                if (BuildProfile.DEBUG) {
-                    OptionItemView({
-                        title: '隐私设置',
-                        showDivider: true,
+                OptionItemView({
+                    title: '隐私设置',
+                    showDivider: true,
+                })
+                    .onClick(() => {
+                        this.mainNavPathStack.pushPathByName(appNavigationDestinations.PrivacySettingPage, {} as Record<string, Object>)
                     })
-                        .onClick(() => {
-                            showToast('TODO')
-                        })
-                }
 
                 Column() {
                     OptionItemView({
