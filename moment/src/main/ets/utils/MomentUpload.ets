@@ -117,6 +117,8 @@ export async function uploadImage(filePath: string): Promise<FeedEntry> {
         entry.mediaWidth = width
         entry.mediaHeight = height
         return entry
+    } catch(e){
+        return new FeedEntry();
     } finally {
         if (file) {
             fs.closeSync(file)
