@@ -79,7 +79,7 @@ export default struct ConversationListTab {
     }
 
     _loadConversationList = async () => {
-        let conversationInfos = wfc.getConversationInfoList([0, 1, 2, 3], [0, 1]);
+        let conversationInfos = wfc.getConversationInfoList([0, 1, 2, 3], [0]);
         this.conversationInfoDataSource.setConversationInfos(conversationInfos)
         let totalUnreadCount = 0
         conversationInfos.forEach(info => {

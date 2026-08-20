@@ -14,7 +14,7 @@ export default struct PickConversationModal {
     onClickConversation?: (conversationInfo: ConversationInfo) => void
 
     aboutToAppear() {
-        this.recentConversationInfos = wfc.getConversationInfoList([0, 1, 2, 3], [0, 1]);
+        this.recentConversationInfos = wfc.getConversationInfoList([0, 1, 2, 3], [0]);
     }
 
     private searchModules: SearchModule[] = [
