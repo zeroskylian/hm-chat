@@ -112,6 +112,10 @@ export default struct NormaMessageContentView {
                 StreamingTextMessageContentView({ message: $message })
             } else if (this.message.messageContent.type === MessageContentType.Streaming_Text_Generated) {
                 StreamingTextMessageContentView({ message: $message })
+            } else if (this.message.messageContent.type === MessageContentType.Streaming_Text_Cancelled) {
+                // 取消消息（20）不渲染：实时场景已在 ConversationPage 按 streamId 删除对应的
+                // 14/15 消息，取消消息自身不进入列表；此处兜底，历史残留也不显示
+                Text('').fontSize(0).width(0).height(0)
             } else if (this.message.messageContent.type === MessageContentType.Collection) {
                 CollectionMessageContentView({ message: $message })
             } else if (this.message.messageContent.type === MessageContentType.Poll) {

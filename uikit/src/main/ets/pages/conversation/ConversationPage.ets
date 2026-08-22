@@ -38,6 +38,7 @@ import ArticlesMessageContent from '@wfc/client/src/main/ets/wfc/messages/articl
 import ContextableNotificationMessageContentView from './message/ContextableNotificationMessageContentView'
 import StreamingTextGeneratingMessageContent from '@wfc/client/src/main/ets/wfc/messages/streamingTextGeneratingMessageContent'
 import StreamingTextGeneratedMessageContent from '@wfc/client/src/main/ets/wfc/messages/streamingTextGeneratedMessageContent'
+import StreamingTextCancelledMessageContent from '@wfc/client/src/main/ets/wfc/messages/streamingTextCancelledMessageContent'
 import GroupType from '@wfc/client/src/main/ets/wfc/model/groupType'
 import archiveServer from '../../api/archiveServer'
 import ArchiveMessageResult from '../../api/model/archiveMessageResult'
@@ -617,6 +618,15 @@ export default struct ConversationPage {
         }
 
         messages.forEach(message => {
+            // 取消消息（20）是删除信号：按 streamId 移除对应的生成中(14)/已生成(15)消息，
+            // 取消消息自身不显示任何内容、不进入列表
+            if (message.messageContent.type === MessageContentType.Streaming_Text_Cancelled) {
+                if (Conversation.equal(message.conversation, this.conversation!)) {
+                    let cancelledContent = message.messageContent as StreamingTextCancelledMessageContent;
+                    this.conversationMessageDataSource.removeStreamingMessageByStreamId(cancelledContent.streamId);
+                }
+                return;
+            }
             if (this.isDisplayMessage(message) && Conversation.equal(message.conversation, this.conversation!)) {
                 this.conversationMessageDataSource.appendOrUpdateMessage(message);
                 this.scroller.scrollEdge(Edge.Bottom)
@@ -1391,6 +1401,20 @@ class ConversationMessageDataSource extends BasicDataSource<Message> {
     appendMessages(messages: Message[]) {
         this.messages = this.messages.concat(messages)
         this.notifyDataReload();
+    }
+
+    // 取消消息（20）：按 streamId 从消息列表删除对应的生成中(14)/已生成(15)消息，
+    // 界面上的"生成中/已生成"气泡直接消失
+    removeStreamingMessageByStreamId(streamId: string) {
+        let index = this.messages.findIndex(m =>
+            (m.messageContent.type === MessageContentType.Streaming_Text_Generating
+                || m.messageContent.type === MessageContentType.Streaming_Text_Generated)
+            && (m.messageContent as StreamingTextGeneratingMessageContent).streamId === streamId
+        );
+        if (index >= 0) {
+            this.messages.splice(index, 1)
+            this.notifyDataDelete(index)
+        }
     }
 
     removeMessageById(messageId: number) {

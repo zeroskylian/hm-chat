@@ -71,6 +71,7 @@ import MessageContent from '../messages/messageContent';
 import PCLoginRequestMessageContent from '../messages/pcLoginRequestMessageContent';
 import StreamingTextGeneratingMessageContent from '../messages/streamingTextGeneratingMessageContent';
 import StreamingTextGeneratedMessageContent from '../messages/streamingTextGeneratedMessageContent';
+import StreamingTextCancelledMessageContent from '../messages/streamingTextCancelledMessageContent';
 import BackupRequestNotificationContent from '../messages/backup/backupRequestNotificationContent';
 import BackupResponseNotificationContent from '../messages/backup/backupResponseNotificationContent';
 import RestoreRequestNotificationContent from '../messages/backup/restoreRequestNotificationContent';
@@ -308,6 +309,9 @@ export default class MessageConfig {
             case MessageContentType.Streaming_Text_Generated:
                 content = new StreamingTextGeneratedMessageContent()
                 break
+            case MessageContentType.Streaming_Text_Cancelled:
+                content = new StreamingTextCancelledMessageContent()
+                break
             case MessageContentType.Restore_Request:
                 content = new RestoreRequestNotificationContent()
                 break
@@ -412,6 +416,11 @@ export default class MessageConfig {
             name: 'streamingTextGenerating',
             flag: PersistFlag.Persist_And_Count,
             type: MessageContentType.Streaming_Text_Generated,
+        },
+        {
+            name: 'streamingTextCancelled',
+            flag: PersistFlag.Transparent,
+            type: MessageContentType.Streaming_Text_Cancelled,
         },
         {
             name: 'tip',

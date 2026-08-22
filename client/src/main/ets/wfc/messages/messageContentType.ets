@@ -27,6 +27,9 @@ export default class MessageContentType {
     //流式文本消息
     static Streaming_Text_Generated = 15;
 
+    // 流式文本取消消息（生成无产出/失败时由机器人发送，客户端按 streamId 删除对应的 14/15 消息）
+    static Streaming_Text_Cancelled = 20;
+
     // 接龙消息
     static Collection = 17;
 
