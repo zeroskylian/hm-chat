@@ -2971,8 +2971,10 @@ export class WfcManager {
     getPCOnlineInfos(): PCOnlineInfo[] {
         let pcOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "PC");
         let webOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "Web");
-        let wxOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "WX");
         let padOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "Pad");
+        let wxOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "WX");
+        let wearableOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "Wearable");
+        let tvOnline = this.getUserSetting(UserSettingScope.UserSettingPCOnline, "TV");
 
         let infos: PCOnlineInfo[] = []
         let info = PCOnlineInfo.infoFromStr(pcOnline, PCOnlineInfo.PC_Online);
@@ -2983,11 +2985,19 @@ export class WfcManager {
         if (info != null) {
             infos.push(info);
         }
+        info = PCOnlineInfo.infoFromStr(padOnline, PCOnlineInfo.Pad_Online);
+        if (info != null) {
+            infos.push(info);
+        }
         info = PCOnlineInfo.infoFromStr(wxOnline, PCOnlineInfo.WX_Online);
         if (info != null) {
             infos.push(info);
         }
-        info = PCOnlineInfo.infoFromStr(padOnline, PCOnlineInfo.Pad_Online);
+        info = PCOnlineInfo.infoFromStr(wearableOnline, PCOnlineInfo.Wearable_Online);
+        if (info != null) {
+            infos.push(info);
+        }
+        info = PCOnlineInfo.infoFromStr(tvOnline, PCOnlineInfo.TV_Online);
         if (info != null) {
             infos.push(info);
         }

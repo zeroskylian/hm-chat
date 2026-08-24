@@ -17,6 +17,13 @@ export default class Platform {
     static PlatformType_Harmony = 10
     static PlatformType_Harmony_Pad = 11
     static PlatformType_Harmony_PC = 12
+    // 穿戴设备
+    static PlatformType_AndroidWearable = 13
+    static PlatformType_HarmonyWearable = 14
+    // TV 端
+    static PlatformType_AndroidTV = 15
+    static PlatformType_AppleTV = 16
+    static PlatformType_HarmonyTV = 17
     platform = Platform.PlatformType_UNSET
 
     constructor(platform: number) {
@@ -61,6 +68,21 @@ export default class Platform {
                 break;
             case Platform.PlatformType_Harmony_PC:
                 platFormName = "鸿蒙PC";
+                break;
+            case Platform.PlatformType_AndroidWearable:
+                platFormName = "Android 手表";
+                break;
+            case Platform.PlatformType_HarmonyWearable:
+                platFormName = "鸿蒙手表";
+                break;
+            case Platform.PlatformType_AndroidTV:
+                platFormName = "Android 电视";
+                break;
+            case Platform.PlatformType_AppleTV:
+                platFormName = "Apple TV";
+                break;
+            case Platform.PlatformType_HarmonyTV:
+                platFormName = "鸿蒙电视";
                 break;
             default:
                 break;

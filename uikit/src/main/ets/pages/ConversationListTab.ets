@@ -14,6 +14,8 @@ import { openConversation, isWideScreen, conversationIdentity, STORAGE_KEY_ACTIV
 import PCOnlineInfo from '@wfc/client/src/main/ets/wfc/model/pcOnlineInfo'
 import ConversationInfoDataSource from './datasource/ConversationInfoDataSource'
 import GroupInfo from '@wfc/client/src/main/ets/wfc/model/groupInfo'
+import { FontSize } from '../common/design/Tokens'
+import { pcPlatformSymbol, pcDeviceName } from '../common/utils/pcOnlineUtil'
 
 @Component
 @Preview
@@ -109,6 +111,19 @@ export default struct ConversationListTab {
 
     loadPCOnlineInfos() {
         this.pcOnlineInfos = wfc.getPCOnlineInfos();
+    }
+
+    // 多端登录条文案：单端「XX平台已登录」，多端「X个设备已经登录」
+    private pcOnlineBarText(): string {
+        if (this.pcOnlineInfos.length === 1) {
+            let info = this.pcOnlineInfos[0];
+            let text = `${pcDeviceName(info)} 已登录`;
+            if (this.isMuteWhenPCOnline) {
+                text = text + '，手机通知已关闭';
+            }
+            return text;
+        }
+        return `${this.pcOnlineInfos.length}个设备已经登录`;
     }
 
     onConnectionStatusChange = (status: number) => {
@@ -264,24 +279,37 @@ export default struct ConversationListTab {
                     .width('100%')
                 }
                 if (this.pcOnlineInfos.length > 0) {
-                    ForEach(this.pcOnlineInfos, (info: PCOnlineInfo, index: number) => {
-                        ListItem() {
-                            Text(`${info.desc() + (this.isMuteWhenPCOnline ? '，手机通知已关闭' : '')}`)
-                                .height(40)
-                                .width('100%')
-                                .backgroundColor($r('app.color.wf_secondary_background'))
-                                .fontColor($r('app.color.wf_secondary_text'))
-                                .textAlign(TextAlign.Center)
+                    ListItem() {
+                        // 多端登录条：左侧对齐，图标+文案；单端显示对应平台图标，
+                        // 多端合并为一条显示电脑图标
+                        Row() {
+                            if (this.pcOnlineInfos.length === 1) {
+                                SymbolGlyph(pcPlatformSymbol(this.pcOnlineInfos[0]))
+                                    .fontSize(FontSize.lg)
+                                    .fontColor([$r('app.color.wf_secondary_text')])
+                            } else {
+                                SymbolGlyph($r('sys.symbol.computer'))
+                                    .fontSize(FontSize.lg)
+                                    .fontColor([$r('app.color.wf_secondary_text')])
+                            }
 
+                            Text(this.pcOnlineBarText())
+                                .fontSize(FontSize.md)
+                                .fontColor($r('app.color.wf_secondary_text'))
+                                .margin({ left: 10 })
+                                .maxLines(1)
+                                .textOverflow({ overflow: TextOverflow.Ellipsis })
                         }
                         .width('100%')
-                        .onClick(() => {
-                            this.mainNavPathStack.pushPathByName(uikitNavigationDestinations.PCSessionPage, {
-                                'pcOnlineInfo': info
-                            } as Record<string, object>)
-                        })
-                    }, (item: PCOnlineInfo, index: number) => {
-                        return item.type + '-' + item.platform.platform + '-' + item.clientId
+                        .height(44)
+                        .padding({ left: 16, right: 16 })
+                        .backgroundColor($r('app.color.wf_secondary_background'))
+                    }
+                    .width('100%')
+                    .onClick(() => {
+                        this.mainNavPathStack.pushPathByName(uikitNavigationDestinations.PCSessionPage, {
+                            'pcOnlineInfos': this.pcOnlineInfos
+                        } as Record<string, object>)
                     })
                 }
 

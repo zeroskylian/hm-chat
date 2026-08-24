@@ -6,17 +6,22 @@ import Platform from '../client/platform'
 
 export default class PCOnlineInfo {
     /**
-     * PC在线类型
+     * 多端在线类型
      * <p>
      * - PC_Online: PC客户端在线
      * - Web_Online: Web客户端在线
      * - WX_Online: WX小程序客户端在线
      * - Pad_Online: Pad客户端在线
+     * - Wearable_Online: 穿戴设备客户端在线
+     * - TV_Online: TV客户端在线
+     * （当前为手机平台，本机不会出现在多端在线列表，故不处理 Mobile_Online）
      */
     static PC_Online = 0
     static Web_Online = 1
     static WX_Online = 2
     static Pad_Online = 3
+    static Wearable_Online = 4
+    static TV_Online = 5
     type = PCOnlineInfo.PC_Online;
     platform = new Platform(0)
     isOnline = false;
@@ -38,6 +43,12 @@ export default class PCOnlineInfo {
                 break
             case PCOnlineInfo.Pad_Online:
                 str = 'Pad 在线'
+                break
+            case PCOnlineInfo.Wearable_Online:
+                str = '手表 在线'
+                break
+            case PCOnlineInfo.TV_Online:
+                str = '电视 在线'
                 break
             default:
                 break
