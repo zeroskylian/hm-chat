@@ -3,10 +3,11 @@ import Message from "@wfc/client/src/main/ets/wfc/messages/message";
 import StreamingTextGeneratingMessageContent from "@wfc/client/src/main/ets/wfc/messages/streamingTextGeneratingMessageContent";
 import StreamingTextGeneratedMessageContent from "@wfc/client/src/main/ets/wfc/messages/streamingTextGeneratedMessageContent";
 import { showToast } from '../../../common/utils/Toast';
-import { parseTextLinks, TextSegment, normalizeUrl, isHttpUrl } from '../../../common/utils/TextLinkParser';
+import { normalizeUrl, isHttpUrl } from '../../../common/utils/TextLinkParser';
 import { common } from '@kit.AbilityKit';
 import { uikitNavigationDestinations } from '../../uikitNavigationConfig';
-import { TextStyleToken, FontSize, Radius } from '../../../common/design/Tokens'
+import { FontSize, Radius } from '../../../common/design/Tokens'
+import { MarkdownMessageView } from './MarkdownMessageView'
 
 @Component
 export default struct StreamingTextMessageContentView {
@@ -28,51 +29,27 @@ export default struct StreamingTextMessageContentView {
 
     build() {
         Column() {
-            if (Config.OPEN_LINK_POLICY === 0) {
-                Text(this.streamingMessageContent())
-                    .constraintSize({ minHeight: 40 })
-                    .padding(12)
-                    .fontSize(TextStyleToken.messageText)
-                    .enableDataDetector(true)
-                    .dataDetectorConfig({
-                        types: [TextDataDetectorType.URL, TextDataDetectorType.PHONE_NUMBER, TextDataDetectorType.EMAIL]
-                    })
-                    .onClick(() => {
-                        if (this.isGenerated()) {
-                            this.mainNavPathStack.pushPathByName(uikitNavigationDestinations.TextMessagePreviewPage, {
-                                'message': this.message
-                            } as Record<string, object>)
-                        }
-                    })
-            } else {
-                Text() {
-                    ForEach(parseTextLinks(this.streamingMessageContent()), (segment: TextSegment, index: number) => {
-                        if (segment.isUrl) {
-                            Span(segment.text)
-                                .fontColor($r('app.color.wf_link'))
-                                .decoration({ type: TextDecorationType.Underline })
-                                .onClick(() => {
-                                    this.handleLinkClick(segment.text)
-                                })
-                        } else {
-                            Span(segment.text)
-                        }
-                    }, (segment: TextSegment, index: number) => index.toString())
-                }
+            // Markdown 渲染（AI 回复常见格式：标题/粗体/代码块/列表/引用/链接）
+            MarkdownMessageView({
+                markdownText: this.streamingMessageContent(),
+                onLinkClick: (url: string): void => this.handleLinkClick(url)
+            })
                 .constraintSize({ minHeight: 40 })
                 .padding(12)
-                .fontSize(TextStyleToken.messageText)
-                .onClick(() => {
-                    if (this.isGenerated()) {
-                        this.mainNavPathStack.pushPathByName(uikitNavigationDestinations.TextMessagePreviewPage, {
-                            'message': this.message
-                        } as Record<string, object>)
-                    }
-                })
-            }
 
             if (!this.isGenerated()) {
-                LoadingProgress().width(20).height(20)
+                Row({ space: 4 }) {
+                    LoadingProgress()
+                        .width(14)
+                        .height(14)
+                        .color($r('app.color.wf_primary'))
+                    Text('生成中...')
+                        .fontSize(FontSize.xs)
+                        .fontColor($r('app.color.wf_tertiary_text'))
+                }
+                .width('100%')
+                .padding({ left: 12, bottom: 8 })
+                .alignItems(VerticalAlign.Center)
             } else {
                 Text('本内容由 AI 生成')
                     .fontSize(FontSize.xs)
@@ -83,6 +60,14 @@ export default struct StreamingTextMessageContentView {
         .borderRadius(Radius.sm)
         .backgroundColor(this.message.direction === 0 ? $r('app.color.wf_sent_bubble_bg') : $r('app.color.wf_received_bubble_bg'))
         .alignItems(HorizontalAlign.Start)
+        .onClick(() => {
+            // 点击气泡查看全文（Markdown 源码预览）
+            if (this.isGenerated()) {
+                this.mainNavPathStack.pushPathByName(uikitNavigationDestinations.TextMessagePreviewPage, {
+                    'message': this.message
+                } as Record<string, object>)
+            }
+        })
     }
 
     handleLinkClick(url: string) {

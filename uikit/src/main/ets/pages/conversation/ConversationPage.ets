@@ -1358,7 +1358,7 @@ class ConversationMessageDataSource extends BasicDataSource<Message> {
     private messages: Message[] = []
 
     setMessages(messages: Message[]): void {
-        this.messages = messages
+        this.messages = this.normalizeStreaming(messages)
         this.notifyDataReload()
     }
 
@@ -1367,8 +1367,63 @@ class ConversationMessageDataSource extends BasicDataSource<Message> {
     }
 
     insertMessages(index: number, messages: Message[]) {
-        this.messages.splice(0, 0, ...messages)
+        this.messages.splice(0, 0, ...this.normalizeStreaming(messages))
         this.notifyDataReload();
+    }
+
+    // 加载历史消息时对流式消息按 streamId 归一化去重，切换会话后不会重复显示：
+    // - 同 streamId 的多条「生成中(14)」只保留最新一条（机器人逐字推送，全部入库）；
+    // - 同 streamId 已有「已生成(15)」时，丢弃所有「生成中(14)」，只保留最终结果。
+    private normalizeStreaming(messages: Message[]): Message[] {
+        if (messages.length === 0) {
+            return messages
+        }
+        // 第一遍：按 streamId 统计「已生成」是否存在、该组最后一条「生成中」的下标
+        let streamIds: string[] = []
+        let hasGenerated: boolean[] = []
+        let lastGeneratingIndex: number[] = []
+        for (let i = 0; i < messages.length; i++) {
+            let m = messages[i]
+            let type = m.messageContent.type
+            let streamId = ''
+            if (type === MessageContentType.Streaming_Text_Generating) {
+                streamId = (m.messageContent as StreamingTextGeneratingMessageContent).streamId
+            } else if (type === MessageContentType.Streaming_Text_Generated) {
+                streamId = (m.messageContent as StreamingTextGeneratedMessageContent).streamId
+            }
+            if (!streamId) {
+                continue
+            }
+            let idx = streamIds.indexOf(streamId)
+            if (idx < 0) {
+                streamIds.push(streamId)
+                hasGenerated.push(false)
+                lastGeneratingIndex.push(-1)
+                idx = streamIds.length - 1
+            }
+            if (type === MessageContentType.Streaming_Text_Generated) {
+                hasGenerated[idx] = true
+            } else if (type === MessageContentType.Streaming_Text_Generating) {
+                lastGeneratingIndex[idx] = i
+            }
+        }
+        if (streamIds.length === 0) {
+            return messages
+        }
+        // 第二遍：过滤重复的「生成中」
+        let result: Message[] = []
+        for (let i = 0; i < messages.length; i++) {
+            let m = messages[i]
+            if (m.messageContent.type === MessageContentType.Streaming_Text_Generating) {
+                let streamId = (m.messageContent as StreamingTextGeneratingMessageContent).streamId
+                let idx = streamIds.indexOf(streamId)
+                if (hasGenerated[idx] || lastGeneratingIndex[idx] !== i) {
+                    continue
+                }
+            }
+            result.push(m)
+        }
+        return result
     }
 
     appendOrUpdateMessage(message: Message) {
@@ -1399,7 +1454,7 @@ class ConversationMessageDataSource extends BasicDataSource<Message> {
     }
 
     appendMessages(messages: Message[]) {
-        this.messages = this.messages.concat(messages)
+        this.messages = this.messages.concat(this.normalizeStreaming(messages))
         this.notifyDataReload();
     }
 
