@@ -4,14 +4,16 @@ import wfc from '../wfc/client/wfc';
 import MessageContent from '../wfc/messages/messageContent'
 import MessagePayload from '../wfc/messages/messagePayload';
 import { FeedEntry } from './momentFeedMessageContent';
+import { _reverseToJsLongString } from '../wfc/util/longUtil';
 
 /**
  * 朋友圈评论/点赞消息，内容类型 502
  */
 export default class MomentCommentMessageContent extends MessageContent {
-    feedId: number = 0;
-    commentId: number = 0;
-    replyCommentId?: number;
+    // int64 id，必须用字符串承载，避免 JSON.parse 精度丢失
+    feedId: string = '';
+    commentId: string = '';
+    replyCommentId?: string;
     sender: string = '';
     // 评论类型，0 评论，1 点赞
     commentType: number = 0;
@@ -86,10 +88,16 @@ export default class MomentCommentMessageContent extends MessageContent {
         super.decode(payload);
         if (payload.binaryContent) {
             try {
-                let obj = JSON.parse(wfc.b64_to_utf8(payload.binaryContent)) as CommentData;
-                this.feedId = obj.feedId || 0;
-                this.commentId = obj.commentId || 0;
-                this.replyCommentId = obj.replyId ? obj.replyId : undefined;
+                // 先把 int64 feedId/commentId/replyId 转为字符串再解析，避免 JS number 精度丢失
+                let json = wfc.b64_to_utf8(payload.binaryContent);
+                json = _reverseToJsLongString(json, 'feedId');
+                json = _reverseToJsLongString(json, 'commentId');
+                json = _reverseToJsLongString(json, 'replyId');
+                let obj = JSON.parse(json) as CommentData;
+                this.feedId = obj.feedId ? String(obj.feedId) : '';
+                this.commentId = obj.commentId ? String(obj.commentId) : '';
+                let replyIdStr = obj.replyId ? String(obj.replyId) : '';
+                this.replyCommentId = replyIdStr !== '' && replyIdStr !== '0' ? replyIdStr : undefined;
                 this.serverTime = obj.serverTime || 0;
                 this.commentType = obj.type || 0;
                 this.sender = obj.sender || '';

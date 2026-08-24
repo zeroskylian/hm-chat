@@ -9,6 +9,8 @@ export struct FeedHeaderComponent {
     @Prop userId: string;
     // 点击封面回调（仅自己的朋友圈首页传入，用于「更新背景」）
     onBackgroundClick?: () => void;
+    // 长按封面回调（仅自己的朋友圈首页传入，用于「更新背景」）
+    onBackgroundLongPress?: () => void;
 
     private safeAreaHeight: number = px2vp(AppStorage.get<number>('SafeAreaTopHeight') || 0);
 
@@ -20,9 +22,8 @@ export struct FeedHeaderComponent {
                 .height('100%')
                 .objectFit(ImageFit.Cover)
                 .backgroundColor($r('app.color.wf_tertiary_text'))
-                .onClick(() => this.onBackgroundClick?.())
 
-            // 渐变遮罩层：从透明到半黑，覆盖下半区
+            // 渐变遮罩层：从透明到半黑，覆盖下半区（不拦截触摸，手势统一由外层 Stack 处理）
             Column()
                 .width('100%')
                 .height('60%')
@@ -34,8 +35,9 @@ export struct FeedHeaderComponent {
                         [$r('app.color.gradient_end'), 1.0]
                     ]
                 })
+                .hitTestBehavior(HitTestMode.None)
 
-            // 底部：用户名 + 头像
+            // 底部：用户名 + 头像（不拦截触摸，手势统一由外层 Stack 处理）
             Row() {
                 // 用户名
                 Text(wfc.getUserInfo(this.userId).displayName)
@@ -62,10 +64,17 @@ export struct FeedHeaderComponent {
             .padding({ right: 16, bottom: 16 })
             .justifyContent(FlexAlign.End)
             .alignItems(VerticalAlign.Bottom)
+            .hitTestBehavior(HitTestMode.None)
         }
         .width('100%')
         .height(MomentConstants.COVER_HEIGHT + this.safeAreaHeight + MomentConstants.AVATAR_SIZE_LARGE / 2)
         .margin({ bottom: MomentConstants.AVATAR_SIZE_LARGE / 2 })
         .clip(true)
+        // 手势挂在最外层 Stack：整个封面区域（含渐变层/底部信息区）都能点击/长按
+        .onClick(() => this.onBackgroundClick?.())
+        .gesture(
+            LongPressGesture()
+                .onAction(() => this.onBackgroundLongPress?.())
+        )
     }
 }

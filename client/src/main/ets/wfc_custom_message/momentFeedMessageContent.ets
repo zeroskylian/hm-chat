@@ -3,6 +3,7 @@ import CustomMessageContentType from "./customMessageContentType";
 import wfc from '../wfc/client/wfc';
 import MessageContent from '../wfc/messages/messageContent'
 import MessagePayload from '../wfc/messages/messagePayload';
+import { _reverseToJsLongString } from '../wfc/util/longUtil';
 
 /**
  * 朋友圈媒体信息
@@ -18,7 +19,8 @@ export class FeedEntry {
  * 朋友圈新动态消息，内容类型 501
  */
 export default class MomentFeedMessageContent extends MessageContent {
-    feedId: number = 0;
+    // int64 id，必须用字符串承载，避免 JSON.parse 精度丢失
+    feedId: string = '';
     // 朋友圈内容类型，0 文本，1 图片，2 视频，3 链接
     feedType: number = 0;
     text?: string;
@@ -81,8 +83,10 @@ export default class MomentFeedMessageContent extends MessageContent {
         super.decode(payload);
         if (payload.binaryContent) {
             try {
-                let obj = JSON.parse(wfc.b64_to_utf8(payload.binaryContent)) as FeedData;
-                this.feedId = obj.feedId || 0;
+                // 先把 int64 feedId 转为字符串再解析，避免 JS number 精度丢失
+                let json = _reverseToJsLongString(wfc.b64_to_utf8(payload.binaryContent), 'feedId');
+                let obj = JSON.parse(json) as FeedData;
+                this.feedId = obj.feedId ? String(obj.feedId) : '';
                 this.feedType = obj.t || 0;
                 this.sender = obj.s || '';
                 this.text = obj.c ? obj.c : undefined;

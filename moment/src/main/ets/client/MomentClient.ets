@@ -11,9 +11,10 @@ import Message from '@wfc/client/src/main/ets/wfc/messages/message'
 import MessageContent from '@wfc/client/src/main/ets/wfc/messages/messageContent'
 import MessageStatus from '@wfc/client/src/main/ets/wfc/messages/messageStatus'
 import Long from '@wfc/client/src/main/ets/wfc/util/long'
+import { _patchToJavaLong, _reverseToJsLongString } from '@wfc/client/src/main/ets/wfc/util/longUtil'
 import { preferences } from '@kit.ArkData'
 import { common } from '@kit.AbilityKit'
-import { Feed, Comment, Profile, UpdateUserProfileType } from '../model/MomentModel'
+import { Feed, Comment, Profile, UpdateUserProfileType, VisibleScope } from '../model/MomentModel'
 
 const TAG = 'MomentClient'
 
@@ -37,10 +38,15 @@ const PREF_KEY_DEFAULT_SCOPE_USERS = 'moment_default_scope_users'
 /** 本地缓存上限：只保留最新 50 条，避免翻页后全量 JSON 重写越来越大。 */
 const MAX_CACHE_COUNT = 50
 
+/**
+ * int64 id（feedId/commentId）为十进制字符串，避免 JS number 精度丢失。
+ */
+export type FeedId = string
+
 export type OnReceiveNewCommentCallback = (comment: MessageContent) => void
 export type OnReceiveMentionedFeedCallback = (feed: MessageContent) => void
-export type MomentPostSuccessCallback = (feedId: number, timestamp: number) => void
-export type CommentPostSuccessCallback = (commentId: number, timestamp: number) => void
+export type MomentPostSuccessCallback = (feedId: FeedId, timestamp: number) => void
+export type CommentPostSuccessCallback = (commentId: FeedId, timestamp: number) => void
 export type FeedsSuccessCallback = (feeds: Feed[]) => void
 export type FeedSuccessCallback = (feed: Feed) => void
 export type ProfileCallback = (profile: Profile) => void
@@ -54,6 +60,19 @@ export type MessagesSuccessCallback = (messages: Message[]) => void
 export interface DefaultVisibleScope {
     mode: number
     users: string[]
+}
+
+/**
+ * 序列化请求体。id 字段在模型里是字符串（承载 int64 保证精度），
+ * 但服务端字段是 Java long，需要把 JSON 文本中这些字段的引号剥掉，
+ * 还原成不带引号的数字字面量（只改文本、不经过 JS number，精度无损）。
+ */
+function serializeBody(body: Record<string, Object>, idKeys: string[]): string {
+    let json = JSON.stringify(body)
+    idKeys.forEach(key => {
+        json = _patchToJavaLong(json, key)
+    })
+    return json
 }
 
 /**
@@ -158,8 +177,9 @@ export class MomentClient {
 
         wfc.sendMomentsRequest(`${MOMENTS_PATH}/feed/post`, JSON.stringify(body), (errorCode, response) => {
             if (errorCode === 0 && response) {
-                let map = JSON.parse(response) as Record<string, Object>
-                let feedId = typeof map['id'] === 'number' ? map['id'] as number : 0
+                // id 是 int64，先转为字符串再解析，避免 JS number 精度丢失
+                let map = JSON.parse(_reverseToJsLongString(response, 'id')) as Record<string, Object>
+                let feedId = typeof map['id'] === 'string' ? map['id'] as string : ''
                 let timestamp = typeof map['timestamp'] === 'number' ? map['timestamp'] as number : 0
                 success(feedId, timestamp)
             } else {
@@ -171,11 +191,11 @@ export class MomentClient {
     /**
      * 删除朋友圈，朋友圈必须属于当前用户才能删除
      */
-    deleteFeed(feedId: number, success: MomentVoidSuccessCallback, fail: FailureCallback) {
+    deleteFeed(feedId: FeedId, success: MomentVoidSuccessCallback, fail: FailureCallback) {
         let body: Record<string, Object> = {
             'id': feedId
         }
-        wfc.sendMomentsRequest(`${MOMENTS_PATH}/feed/recall`, JSON.stringify(body), (errorCode, response) => {
+        wfc.sendMomentsRequest(`${MOMENTS_PATH}/feed/recall`, serializeBody(body, ['id']), (errorCode, response) => {
             if (errorCode === 0) {
                 success()
             } else {
@@ -187,9 +207,13 @@ export class MomentClient {
     /**
      * 批量获取朋友圈。fromIndex == 0 覆盖缓存，否则读缓存追加再写（不去重，对齐 Flutter）
      */
-    getFeeds(fromIndex: number, count: number, user: string | null, success: FeedsSuccessCallback, fail: FailureCallback) {
+    getFeeds(fromIndex: number | FeedId, count: number, user: string | null, success: FeedsSuccessCallback, fail: FailureCallback) {
         let body: Record<string, Object> = {}
-        if (fromIndex > 0) {
+        if (typeof fromIndex === 'string') {
+            if (fromIndex.length > 0) {
+                body['feedId'] = fromIndex
+            }
+        } else if (fromIndex > 0) {
             body['feedId'] = fromIndex
         }
         if (count > 0) {
@@ -199,17 +223,21 @@ export class MomentClient {
             body['user'] = user
         }
 
-        wfc.sendMomentsRequest(`${MOMENTS_PB_PATH}/feed/pull`, JSON.stringify(body), (errorCode, response) => {
+        wfc.sendMomentsRequest(`${MOMENTS_PB_PATH}/feed/pull`, serializeBody(body, ['feedId']), (errorCode, response) => {
             if (errorCode === 0 && response) {
                 let feeds: Feed[] = []
-                let list = JSON.parse(response) as Object
+                // feedId/commentId 是 int64，先转为字符串再解析，避免 JS number 精度丢失
+                let json = _reverseToJsLongString(response, 'feedId');
+                json = _reverseToJsLongString(json, 'commentId');
+                json = _reverseToJsLongString(json, 'replyId');
+                let list = JSON.parse(json) as Object
                 if (Array.isArray(list)) {
                     let items = list as Object[]
                     items.forEach(item => {
                         feeds.push(Feed.fromMap(item as Record<string, Object>))
                     })
                 }
-                if (fromIndex === 0) {
+                if (typeof fromIndex === 'string' ? fromIndex.length === 0 : fromIndex === 0) {
                     this.storeFeeds(feeds, user)
                 } else {
                     let exist = this.feedsRestore(user)
@@ -226,13 +254,17 @@ export class MomentClient {
     /**
      * 获取单条朋友圈
      */
-    getFeed(feedId: number, success: FeedSuccessCallback, fail: FailureCallback) {
+    getFeed(feedId: FeedId, success: FeedSuccessCallback, fail: FailureCallback) {
         let body: Record<string, Object> = {
             'feedId': feedId
         }
-        wfc.sendMomentsRequest(`${MOMENTS_PB_PATH}/feed/pull_one`, JSON.stringify(body), (errorCode, response) => {
+        wfc.sendMomentsRequest(`${MOMENTS_PB_PATH}/feed/pull_one`, serializeBody(body, ['feedId']), (errorCode, response) => {
             if (errorCode === 0 && response) {
-                let map = JSON.parse(response) as Record<string, Object>
+                // feedId/commentId 是 int64，先转为字符串再解析，避免 JS number 精度丢失
+                let json = _reverseToJsLongString(response, 'feedId');
+                json = _reverseToJsLongString(json, 'commentId');
+                json = _reverseToJsLongString(json, 'replyId');
+                let map = JSON.parse(json) as Record<string, Object>
                 success(Feed.fromMap(map))
             } else {
                 fail(errorCode)
@@ -245,10 +277,11 @@ export class MomentClient {
      */
     postComment(comment: Comment, success: CommentPostSuccessCallback, fail: FailureCallback) {
         comment.sender = wfc.getUserId()
-        wfc.sendMomentsRequest(`${MOMENTS_PATH}/comment/post`, JSON.stringify(comment.toMap()), (errorCode, response) => {
+        wfc.sendMomentsRequest(`${MOMENTS_PATH}/comment/post`, serializeBody(comment.toMap(), ['feedId', 'commentId', 'replyId']), (errorCode, response) => {
             if (errorCode === 0 && response) {
-                let map = JSON.parse(response) as Record<string, Object>
-                let commentId = typeof map['id'] === 'number' ? map['id'] as number : 0
+                // id 是 int64，先转为字符串再解析，避免 JS number 精度丢失
+                let map = JSON.parse(_reverseToJsLongString(response, 'id')) as Record<string, Object>
+                let commentId = typeof map['id'] === 'string' ? map['id'] as string : ''
                 let timestamp = typeof map['timestamp'] === 'number' ? map['timestamp'] as number : 0
                 success(commentId, timestamp)
             } else {
@@ -260,12 +293,12 @@ export class MomentClient {
     /**
      * 删除评论或点赞
      */
-    deleteComment(commentId: number, feedId: number, success: MomentVoidSuccessCallback, fail: FailureCallback) {
+    deleteComment(commentId: FeedId, feedId: FeedId, success: MomentVoidSuccessCallback, fail: FailureCallback) {
         let body: Record<string, Object> = {
             'id': commentId,
             'id2': feedId
         }
-        wfc.sendMomentsRequest(`${MOMENTS_PATH}/comment/recall`, JSON.stringify(body), (errorCode, response) => {
+        wfc.sendMomentsRequest(`${MOMENTS_PATH}/comment/recall`, serializeBody(body, ['id', 'id2']), (errorCode, response) => {
             if (errorCode === 0) {
                 success()
             } else {
@@ -420,11 +453,47 @@ export class MomentClient {
         }
         wfc.sendMomentsRequest(`${MOMENTS_PATH}/profiles/value/push`, JSON.stringify(body), (errorCode, response) => {
             if (errorCode === 0) {
+                // 服务端返回最新 updateDt，同步进本地 profile 缓存：
+                // 保证更新（背景等）后立即生效，且不会被 getUserProfile 的旧缓存回调回退。
+                let updateDt = 0
+                if (response) {
+                    try {
+                        let map = JSON.parse(response) as Record<string, Object>
+                        if (typeof map['updateDt'] === 'number') {
+                            updateDt = map['updateDt'] as number
+                        }
+                    } catch (e) {
+                        console.error(`${TAG} parse updateMyProfile response failed: ${JSON.stringify(e)}`)
+                    }
+                }
+                this.applyProfileUpdate(type, strValue, intValue, updateDt)
                 success()
             } else {
                 fail(errorCode)
             }
         })
+    }
+
+    /**
+     * 把本次设置合并进本地 profile 缓存（含服务端返回的最新 updateDt）。
+     */
+    private applyProfileUpdate(type: UpdateUserProfileType, strValue: string | null, intValue: number | null, updateDt: number) {
+        let userId = wfc.getUserId()
+        let profile = this.profileFromStore(userId)
+        if (!profile) {
+            profile = new Profile()
+        }
+        if (type === UpdateUserProfileType.BackgroundUrl && strValue !== null && strValue.length > 0) {
+            profile.backgroundUrl = strValue
+        } else if (type === UpdateUserProfileType.StrangerVisibleCount && intValue !== null) {
+            profile.strangerVisibleCount = intValue
+        } else if (type === UpdateUserProfileType.VisibleScope && intValue !== null) {
+            profile.visibleScope = intValue as VisibleScope
+        }
+        if (updateDt !== 0) {
+            profile.updateDt = updateDt
+        }
+        this.profileToStore(userId, profile)
     }
 
     /**
@@ -491,6 +560,21 @@ export class MomentClient {
             console.error(`${TAG} restore feeds cache failed: ${JSON.stringify(e)}`)
         }
         return feeds
+    }
+
+    /**
+     * 把单条 feed 合并进本地缓存（按 feedId 替换，不存在则插入头部）。
+     * 供详情页互动/刷新后保持列表缓存一致，退出重进时不回退。
+     */
+    updateFeedCache(feed: Feed, userId?: string | null) {
+        let exist = this.feedsRestore(userId)
+        let idx = exist.findIndex(f => f.feedId === feed.feedId)
+        if (idx !== -1) {
+            exist[idx] = feed
+        } else {
+            exist.unshift(feed)
+        }
+        this.storeFeeds(exist, userId)
     }
 
     private feedsCacheKey(userId?: string | null): string {

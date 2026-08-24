@@ -178,7 +178,7 @@ export struct FeedMessagesPage {
         .alignItems(VerticalAlign.Top)
         .backgroundColor(MomentConstants.CARD_BACKGROUND_COLOR)
         .onClick(() => {
-            if (item.feedId > 0) {
+            if (item.feedId.length > 0) {
                 this.mainNavPathStack.pushPathByName(momentNavigationDestinations.FeedDetailPage, {
                     'feedId': item.feedId
                 } as Record<string, Object>);
@@ -216,7 +216,8 @@ export struct FeedMessagesPage {
 class MessageItemData {
     messageId: number = 0;
     sender: string = '';
-    feedId: number = 0;
+    // int64 feedId，用字符串承载避免精度丢失
+    feedId: string = '';
     isPraise: boolean = false;
     isMention: boolean = false;
     text: string = '';

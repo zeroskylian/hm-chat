@@ -102,7 +102,7 @@ export interface FeedInteractionEvents {
  */
 export interface CommentInputState {
     isVisible: boolean;
-    feedId?: number;
+    feedId?: string;
     replyTo?: string;
     replyToName?: string;
     placeholder: string;

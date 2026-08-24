@@ -13,7 +13,7 @@ import { FontSize, Radius } from '@wfc/uikit/src/main/ets/common/design/Tokens'
 
 /**
  * 单条朋友圈详情页。
- * 路由参数：{ feedId: number }
+ * 路由参数：{ feedId: string }（int64 的十进制字符串）
  */
 @Component
 export struct FeedDetailPage {
@@ -52,7 +52,7 @@ export struct FeedDetailPage {
         alignment: DialogAlignment.Center
     });
 
-    private feedId: number = 0;
+    private feedId: string = '';
     private currentUserId: string = '';
 
     @Consume('mainNavPathStack') mainNavPathStack: NavPathStack;
@@ -60,8 +60,13 @@ export struct FeedDetailPage {
     aboutToAppear() {
         this.currentUserId = wfc.getUserId();
         let params = this.mainNavPathStack.getParamByIndex(this.mainNavPathStack.size() - 1) as Record<string, Object>;
-        if (params && typeof params['feedId'] === 'number') {
-            this.feedId = params['feedId'] as number;
+        if (params) {
+            let id = params['feedId'];
+            if (typeof id === 'string') {
+                this.feedId = id;
+            } else if (typeof id === 'number' && id > 0) {
+                this.feedId = id.toString();
+            }
         }
         this.loadFeed();
         try {
@@ -70,11 +75,29 @@ export struct FeedDetailPage {
     }
 
     private loadFeed() {
+        if (!this.feedId) {
+            this.loadFailed = true;
+            return;
+        }
+        // 网络失败时用本地缓存兜底，避免“内容不存在或已删除”误报
+        if (!this.feedViewModel) {
+            let cached = momentClient.feedsRestore(null).find(f => f.feedId === this.feedId);
+            if (!cached) {
+                cached = momentClient.feedsRestore(this.currentUserId).find(f => f.feedId === this.feedId);
+            }
+            if (cached) {
+                this.feedViewModel = new FeedViewModel(cached);
+            }
+        }
         momentClient.getFeed(this.feedId, (feed: Feed) => {
             this.feedViewModel = new FeedViewModel(feed);
             this.loadFailed = false;
+            // 同步进列表缓存，退出重进时不回退
+            momentClient.updateFeedCache(feed, null);
         }, () => {
-            this.loadFailed = true;
+            if (!this.feedViewModel) {
+                this.loadFailed = true;
+            }
         });
     }
 

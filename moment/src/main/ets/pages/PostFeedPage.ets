@@ -68,8 +68,27 @@ export struct PostFeedPage {
 
     aboutToAppear() {
         let params = this.mainNavPathStack.getParamByIndex(this.mainNavPathStack.size() - 1) as Record<string, Object>;
-        if (params && typeof params['textOnly'] === 'boolean') {
-            this.textOnly = params['textOnly'] as boolean;
+        if (params) {
+            if (typeof params['textOnly'] === 'boolean') {
+                this.textOnly = params['textOnly'] as boolean;
+            }
+            // 拍摄入口：直接带入拍摄结果，跳过相册选择
+            let images = params['selectedImages'];
+            if (Array.isArray(images)) {
+                let list = images as Object[]
+                let selected: string[] = []
+                list.forEach(item => {
+                    if (typeof item === 'string') {
+                        selected.push(item)
+                    }
+                })
+                if (selected.length > 0) {
+                    this.postState.selectedImages = selected.slice(0, MAX_IMAGES);
+                }
+            }
+            if (typeof params['selectedVideo'] === 'string' && (params['selectedVideo'] as string).length > 0) {
+                this.postState.selectedVideo = params['selectedVideo'] as string;
+            }
         }
         // 「谁可以看」初始值读取发布默认可见范围
         let scope = momentClient.getDefaultVisibleScope();

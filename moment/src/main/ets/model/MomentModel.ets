@@ -50,6 +50,23 @@ function optNumber(value: Object): number | undefined {
     return typeof value === 'number' ? value : undefined
 }
 
+/**
+ * 把 id 字段规范化为精确的十进制字符串。
+ * 服务端 feedId/commentId 是 int64（约 5e17~7e18），远超 JS 安全整数 2^53，
+ * 协议层已把大整数按字符串下发（见 longUtil._reverseToJsLongString）；
+ * 这里兼容字符串与安全范围内的数字两种形态，避免任何一处精度丢失。
+ */
+function optIdString(value: Object): string | undefined {
+    if (typeof value === 'string' && value.length > 0 && value !== '0') {
+        return value
+    }
+    // 兼容安全范围内的数字（2^53 以内）；int64 id 已由协议层转为字符串
+    if (typeof value === 'number' && value > 0 && value <= 9007199254740991) {
+        return value.toString()
+    }
+    return undefined
+}
+
 function optStringArray(value: Object): string[] | undefined {
     if (!Array.isArray(value)) {
         return undefined
@@ -103,7 +120,8 @@ export class FeedEntry {
  * 朋友圈条目
  */
 export class Feed {
-    feedId?: number
+    // int64 id，用字符串承载避免精度丢失
+    feedId?: string
     sender: string = ''
     type: FeedContentType = FeedContentType.Text
     text?: string
@@ -166,7 +184,7 @@ export class Feed {
         feed.serverTime = optNumber(map['timestamp'])
         let type = optNumber(map['type'])
         feed.type = type !== undefined ? type as FeedContentType : FeedContentType.Text
-        feed.feedId = optNumber(map['feedId'])
+        feed.feedId = optIdString(map['feedId'])
         feed.sender = optString(map['sender']) ?? wfc.getUserId()
         let medias = map['medias']
         if (Array.isArray(medias)) {
@@ -205,9 +223,10 @@ export class Feed {
  * 朋友圈评论
  */
 export class Comment {
-    feedId: number = 0
-    commentId?: number
-    replyCommentId?: number
+    // int64 id，用字符串承载避免精度丢失
+    feedId: string = ''
+    commentId?: string
+    replyCommentId?: string
     sender: string = ''
     type: FeedCommentType = FeedCommentType.Comment
     text?: string
@@ -248,12 +267,12 @@ export class Comment {
         comment.serverTime = optNumber(map['serverTime'])
         let type = optNumber(map['type'])
         comment.type = type !== undefined ? type as FeedCommentType : FeedCommentType.Comment
-        comment.feedId = optNumber(map['feedId']) ?? 0
-        comment.commentId = optNumber(map['commentId'])
+        comment.feedId = optIdString(map['feedId']) ?? ''
+        comment.commentId = optIdString(map['commentId'])
         comment.sender = optString(map['sender']) ?? wfc.getUserId()
         comment.extra = optString(map['extra'])
         comment.replyTo = optString(map['replyTo'])
-        comment.replyCommentId = optNumber(map['replyId'])
+        comment.replyCommentId = optIdString(map['replyId'])
         return comment
     }
 }

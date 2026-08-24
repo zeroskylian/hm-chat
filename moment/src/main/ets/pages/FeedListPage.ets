@@ -13,6 +13,9 @@ import { uikitNavigationDestinations } from '@wfc/uikit/src/main/ets/pages/uikit
 import { showToast } from '@wfc/uikit/src/main/ets/common/utils/Toast';
 import { promptAction, KeyboardAvoidMode } from '@kit.ArkUI';
 import photoAccessHelper from '@ohos.file.photoAccessHelper';
+import cameraPicker from '@ohos.multimedia.cameraPicker';
+import camera from '@ohos.multimedia.camera';
+import { common } from '@kit.AbilityKit';
 import { FontSize, Radius } from '@wfc/uikit/src/main/ets/common/design/Tokens'
 
 const PAGE_SIZE = 20;
@@ -134,7 +137,7 @@ export struct FeedListPage {
         if (this.isLoadingMore || !this.hasMore) return;
         this.isLoadingMore = true;
         const lastFeed = this.feeds[this.feeds.length - 1];
-        const fromIndex = lastFeed?.feed.feedId ?? 0;
+        const fromIndex = lastFeed?.feed.feedId ?? '';
         momentClient.getFeeds(fromIndex, PAGE_SIZE, this.isHome() ? null : this.pageUserId, (feeds: Feed[]) => {
             if (feeds.length === 0) {
                 this.hasMore = false;
@@ -148,31 +151,77 @@ export struct FeedListPage {
         });
     }
 
-    // 相机按钮：点击弹「从相册选择 / 发表文字」
+    // 相机按钮：点击弹「拍摄 / 从相册选择 / 发表文字」
     private showPublishMenu() {
         promptAction.showActionMenu({
             title: '',
             buttons: [
+                { text: '拍摄', color: $r('app.color.text_primary') },
                 { text: '从相册选择', color: $r('app.color.text_primary') },
                 { text: '发表文字', color: $r('app.color.text_primary') }
             ]
         }).then(result => {
             if (result.index === 0) {
-                this.pushPostFeedPage(false);
+                this.takePhotoAndPublish();
             } else if (result.index === 1) {
-                this.pushPostFeedPage(true);
+                this.pushPostFeedPage(false, []);
+            } else if (result.index === 2) {
+                this.pushPostFeedPage(true, []);
             }
         }).catch(() => {});
     }
 
-    private pushPostFeedPage(textOnly: boolean) {
-        this.mainNavPathStack.pushPathByName(momentNavigationDestinations.PostFeedPage, {
+    // 调用系统相机拍摄，拍完直接进入发布页（带拍摄结果）
+    private async takePhotoAndPublish() {
+        try {
+            const context = AppStorage.get<common.UIAbilityContext>('context');
+            if (!context) {
+                showToast('无法获取相机');
+                return;
+            }
+            const pickerProfile: cameraPicker.PickerProfile = {
+                cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK
+            };
+            const pickerResult: cameraPicker.PickerResult = await cameraPicker.pick(context,
+                [cameraPicker.PickerMediaType.PHOTO], pickerProfile);
+            if (pickerResult.resultCode === 0 && pickerResult.resultUri) {
+                this.pushPostFeedPage(false, [pickerResult.resultUri]);
+            }
+        } catch (e) {
+            // 用户取消拍摄或相机不可用
+        }
+    }
+
+    private pushPostFeedPage(textOnly: boolean, selectedImages: string[]) {
+        let params: Record<string, Object> = {
             'textOnly': textOnly
-        } as Record<string, Object>);
+        };
+        if (selectedImages.length > 0) {
+            params['selectedImages'] = selectedImages;
+        }
+        this.mainNavPathStack.pushPathByName(momentNavigationDestinations.PostFeedPage, params);
     }
 
     // 封面点击：更新背景（仅自己的朋友圈首页）
     private onBackgroundClick() {
+        if (!this.isHome()) return;
+        promptAction.showActionMenu({
+            title: '',
+            buttons: [
+                { text: '拍摄', color: $r('app.color.text_primary') },
+                { text: '从相册选择', color: $r('app.color.text_primary') }
+            ]
+        }).then(result => {
+            if (result.index === 0) {
+                this.takePhotoAndUpdateBackground();
+            } else if (result.index === 1) {
+                this.pickAndUpdateBackground();
+            }
+        }).catch(() => {});
+    }
+
+    // 封面长按：弹出「更新背景」，选择图片后设置背景（仅自己的朋友圈首页）
+    private onBackgroundLongPress() {
         if (!this.isHome()) return;
         promptAction.showActionMenu({
             title: '',
@@ -186,6 +235,26 @@ export struct FeedListPage {
         }).catch(() => {});
     }
 
+    private async takePhotoAndUpdateBackground() {
+        try {
+            const context = AppStorage.get<common.UIAbilityContext>('context');
+            if (!context) {
+                showToast('无法获取相机');
+                return;
+            }
+            const pickerProfile: cameraPicker.PickerProfile = {
+                cameraPosition: camera.CameraPosition.CAMERA_POSITION_BACK
+            };
+            const pickerResult: cameraPicker.PickerResult = await cameraPicker.pick(context,
+                [cameraPicker.PickerMediaType.PHOTO], pickerProfile);
+            if (pickerResult.resultCode === 0 && pickerResult.resultUri) {
+                this.uploadAndUpdateBackground(pickerResult.resultUri);
+            }
+        } catch (e) {
+            // 用户取消拍摄
+        }
+    }
+
     private async pickAndUpdateBackground() {
         try {
             const options = new photoAccessHelper.PhotoSelectOptions();
@@ -196,14 +265,31 @@ export struct FeedListPage {
             if (!photoUris || photoUris.length === 0) {
                 return;
             }
-            const url = await uploadMomentMedia(photoUris[0]);
+            this.uploadAndUpdateBackground(photoUris[0]);
+        } catch (e) {
+            showToast('选择图片失败');
+        }
+    }
+
+    private async uploadAndUpdateBackground(uri: string) {
+        try {
+            const url = await uploadMomentMedia(uri);
+            if (!url) {
+                showToast('背景图上传失败');
+                return;
+            }
             momentClient.updateMyProfile(UpdateUserProfileType.BackgroundUrl, url, null, () => {
+                // 先本地立即生效（新对象引用，驱动 @State 刷新），再拉取服务端最新设置
+                let profile = new Profile();
+                profile.backgroundUrl = url;
+                this.userProfile = profile;
+                showToast('背景已更新');
                 this.loadUserProfile();
             }, (errorCode: number) => {
                 showToast(`设置失败 (${errorCode})`);
             });
         } catch (e) {
-            // 用户取消选择或上传失败
+            showToast('背景图上传失败');
         }
     }
 
@@ -224,6 +310,7 @@ export struct FeedListPage {
                         }
                         feed.isLiking = false;
                         this.updateFeed(feed);
+                        this.syncFeedsCache();
                     }, () => { feed.isLiking = false; });
                 } else {
                     feed.isLiking = false;
@@ -233,13 +320,14 @@ export struct FeedListPage {
                 comment.feedId = feedId;
                 comment.type = FeedCommentType.Thumbup;
                 comment.sender = this.currentUserId;
-                momentClient.postComment(comment, (commentId: number, timestamp: number) => {
+                momentClient.postComment(comment, (commentId: string, timestamp: number) => {
                     comment.commentId = commentId;
                     comment.serverTime = timestamp;
                     if (!feed.feed.comments) feed.feed.comments = [];
                     feed.feed.comments.push(comment);
                     feed.isLiking = false;
                     this.updateFeed(feed);
+                    this.syncFeedsCache();
                 }, () => { feed.isLiking = false; });
             }
         },
@@ -255,13 +343,14 @@ export struct FeedListPage {
             comment.sender = this.currentUserId;
             comment.text = commentText.trim();
             comment.replyTo = replyTo || undefined;
-            momentClient.postComment(comment, (commentId: number, timestamp: number) => {
+            momentClient.postComment(comment, (commentId: string, timestamp: number) => {
                 comment.commentId = commentId;
                 comment.serverTime = timestamp;
                 if (!feed.feed.comments) feed.feed.comments = [];
                 feed.feed.comments.push(comment);
                 feed.isCommenting = false;
                 this.updateFeed(feed);
+                this.syncFeedsCache();
                 this.commentInputState.isVisible = false;
                 this.commentText = '';
             }, () => { feed.isCommenting = false; });
@@ -279,6 +368,7 @@ export struct FeedListPage {
                 if (data.index === 1 && feed.feed.feedId !== undefined) {
                     momentClient.deleteFeed(feed.feed.feedId, () => {
                         this.feeds = this.feeds.filter(f => f.feed.feedId !== feed.feed.feedId);
+                        this.syncFeedsCache();
                     }, (errorCode: number) => {
                         showToast(`删除失败 (${errorCode})`);
                     });
@@ -295,6 +385,7 @@ export struct FeedListPage {
                     if (idx !== -1) feed.feed.comments.splice(idx, 1);
                 }
                 this.updateFeed(feed);
+                this.syncFeedsCache();
             }, (errorCode: number) => {
                 showToast(`删除失败 (${errorCode})`);
             });
@@ -330,6 +421,15 @@ export struct FeedListPage {
     private updateFeed(feed: FeedViewModel) {
         feed.markDirty();
         this.feeds = this.feeds.slice();
+    }
+
+    // 互动/删除成功后同步本地缓存，保证退出重进时（网络刷新完成前）数据一致
+    private syncFeedsCache() {
+        let feeds: Feed[] = [];
+        this.feeds.forEach(item => {
+            feeds.push(item.feed);
+        });
+        momentClient.storeFeeds(feeds, this.isHome() ? null : this.pageUserId);
     }
 
     private showCommentInput(feed: FeedViewModel, listIndex: number, replyTo?: string, replyToName?: string) {
@@ -445,7 +545,7 @@ export struct FeedListPage {
                     .onClick(() => this.showPublishMenu())
                     .gesture(
                         LongPressGesture()
-                            .onAction(() => this.pushPostFeedPage(true))
+                            .onAction(() => this.pushPostFeedPage(true, []))
                     )
                 } else {
                     Blank().width(40).height(40)
@@ -563,7 +663,8 @@ export struct FeedListPage {
                     FeedHeaderComponent({
                         profile: this.userProfile,
                         userId: this.headerUserId(),
-                        onBackgroundClick: (): void => this.onBackgroundClick()
+                        onBackgroundClick: (): void => this.onBackgroundClick(),
+                        onBackgroundLongPress: (): void => this.onBackgroundLongPress()
                     })
                 }
 

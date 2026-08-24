@@ -134,7 +134,8 @@ export function _patchToJavaLong(jsonStr: string, key: string) {
         return jsonStr;
     }
 
-    let reg = new RegExp(`"${key}":"([0-9]+)"`, 'g')
+    // 冒号后允许可选空白（JSON 标准），兼容紧凑格式与 pretty 格式（rapidjson PrettyWriter 输出 "key": 123）
+    let reg = new RegExp(`"${key}":\\s*"([0-9]+)"`, 'g')
     return jsonStr.replace(reg, `\"${key}\":$1`);
 }
 
@@ -142,7 +143,8 @@ export function _reverseToJsLongString(jsonStr: string, key: string) {
     if (!jsonStr) {
         return jsonStr;
     }
-    let reg = new RegExp(`"${key}":([0-9]+)`, 'g')
+    // 冒号后允许可选空白（JSON 标准），兼容紧凑格式与 pretty 格式（rapidjson PrettyWriter 输出 "key": 123）
+    let reg = new RegExp(`"${key}":\\s*([0-9]+)`, 'g')
     return jsonStr.replace(reg, `\"${key}\":\"$1\"`);
 }
 
