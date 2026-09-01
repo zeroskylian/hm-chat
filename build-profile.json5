@@ -7,11 +7,11 @@
         "material": {
           "certpath": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001B26F6298F51A7C88E0567D2741D3691D8CCB1104B14A6C7D88C4D5A0C425B16884F564DE9088ECB",
+          "keyPassword": "0000001B5B339C786FF5509CF84513059CE4F8718270C6765E68444925154D9721B740814BF55186B1D04E",
           "profile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p7b",
           "signAlg": "SHA256withECDSA",
           "storeFile": "/Users/lian/.ohos/config/default_hm-chat_wRRbSx-QE_zzfp4l4lg0MFaeDBrRFv-xUPt7s2tC2Co=.p12",
-          "storePassword": "0000001BA9FA7FB3EBB4C1BB23E9D73DF8FA9E7D71D25E233879135AEE80CF852A1ACD8E7808C8ACED1DB1"
+          "storePassword": "0000001B9A51E2192BD23895406843DBB2EC518CCFC4095B7A022971FBCECCB24A873FBA0AA653FEB00810"
         }
       }
     ],
